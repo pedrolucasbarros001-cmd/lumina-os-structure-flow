@@ -14,16 +14,409 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          address: string | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          datetime: string
+          duration: number
+          id: string
+          notes: string | null
+          service_ids: string[]
+          status: Database["public"]["Enums"]["appointment_status"]
+          team_member_id: string | null
+          type: Database["public"]["Enums"]["appointment_type"]
+          unit_id: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          address?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          datetime: string
+          duration?: number
+          id?: string
+          notes?: string | null
+          service_ids?: string[]
+          status?: Database["public"]["Enums"]["appointment_status"]
+          team_member_id?: string | null
+          type?: Database["public"]["Enums"]["appointment_type"]
+          unit_id: string
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          address?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          datetime?: string
+          duration?: number
+          id?: string
+          notes?: string | null
+          service_ids?: string[]
+          status?: Database["public"]["Enums"]["appointment_status"]
+          team_member_id?: string | null
+          type?: Database["public"]["Enums"]["appointment_type"]
+          unit_id?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobility_settings: {
+        Row: {
+          base_fee: number
+          created_at: string
+          id: string
+          price_per_km: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_fee?: number
+          created_at?: string
+          id?: string
+          price_per_km?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_fee?: number
+          created_at?: string
+          id?: string
+          price_per_km?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobility_settings_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: true
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          language: string
+          onboarding_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          language?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          language?: string
+          onboarding_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          price: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          price?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          price?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_member_services: {
+        Row: {
+          id: string
+          service_id: string
+          team_member_id: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          team_member_id: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_services_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          accepts_home_visits: boolean
+          bio: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          photo_url: string | null
+          role: string
+          unit_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepts_home_visits?: boolean
+          bio?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          photo_url?: string | null
+          role?: string
+          unit_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepts_home_visits?: boolean
+          bio?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          photo_url?: string | null
+          role?: string
+          unit_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          accepts_home_visits: boolean
+          address: string | null
+          business_hours: Json
+          cover_url: string | null
+          created_at: string
+          id: string
+          is_published: boolean
+          logo_url: string | null
+          name: string
+          owner_id: string
+          phone: string | null
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepts_home_visits?: boolean
+          address?: string | null
+          business_hours?: Json
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          logo_url?: string | null
+          name: string
+          owner_id: string
+          phone?: string | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepts_home_visits?: boolean
+          address?: string | null
+          business_hours?: Json
+          cover_url?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          logo_url?: string | null
+          name?: string
+          owner_id?: string
+          phone?: string | null
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "owner" | "team_member"
+      appointment_status:
+        | "pending_approval"
+        | "confirmed"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+      appointment_type: "unit" | "home"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +543,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["owner", "team_member"],
+      appointment_status: [
+        "pending_approval",
+        "confirmed",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
+      appointment_type: ["unit", "home"],
+    },
   },
 } as const
