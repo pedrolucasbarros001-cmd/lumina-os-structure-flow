@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Phone, MapPin, Clock, Save, Globe, Link } from 'lucide-react';
+import { Building2, Phone, MapPin, Clock, Save, Globe, Link, Copy, CheckCheck, ExternalLink, QrCode, Eye, EyeOff } from 'lucide-react';
 import { useUnit } from '@/hooks/useUnit';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,22 +12,91 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 
 const DAYS = [
-  { key: 'mon', label: 'Seg' },
-  { key: 'tue', label: 'Ter' },
-  { key: 'wed', label: 'Qua' },
-  { key: 'thu', label: 'Qui' },
-  { key: 'fri', label: 'Sex' },
-  { key: 'sat', label: 'Sáb' },
-  { key: 'sun', label: 'Dom' },
+  { key: 'mon', label: 'Seg' }, { key: 'tue', label: 'Ter' }, { key: 'wed', label: 'Qua' },
+  { key: 'thu', label: 'Qui' }, { key: 'fri', label: 'Sex' }, { key: 'sat', label: 'Sáb' }, { key: 'sun', label: 'Dom' },
 ];
 
 type BusinessHours = Record<string, { open: boolean; start: string; end: string }>;
-
 const defaultHours = (): BusinessHours =>
-  Object.fromEntries(
-    DAYS.map(d => [d.key, { open: !['sat', 'sun'].includes(d.key), start: '09:00', end: '18:00' }])
-  );
+  Object.fromEntries(DAYS.map(d => [d.key, { open: !['sat', 'sun'].includes(d.key), start: '09:00', end: '18:00' }]));
 
+// ─────────────────────────────────────────
+// BOOKING LINK CARD (The "Magia Pública")
+// ─────────────────────────────────────────
+function BookingLinkCard({ slug, isPublished, onPublish }: { slug: string; isPublished: boolean; onPublish: (v: boolean) => void }) {
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
+
+  const bookingUrl = slug ? `${window.location.origin}/s/${slug}` : '';
+
+  const handleCopy = () => {
+    if (!bookingUrl) return;
+    navigator.clipboard.writeText(bookingUrl);
+    setCopied(true);
+    toast({ title: '✅ Link copiado!' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Vitrine Online</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{isPublished ? '🟢 Online' : '🔴 Offline'}</span>
+          <Switch checked={isPublished} onCheckedChange={onPublish} />
+        </div>
+      </div>
+
+      <div className={cn(
+        'bg-card border rounded-2xl p-4 space-y-4 transition-all',
+        isPublished ? 'border-primary/30 bg-primary/5' : 'border-border/50 opacity-60'
+      )}>
+        {isPublished && slug ? (
+          <>
+            {/* Preview */}
+            <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border/50">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Globe className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Link de Agendamento Público</p>
+                <p className="text-sm font-mono font-medium truncate text-primary">/s/{slug}</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="grid grid-cols-2 gap-2">
+              <Button size="sm" variant="outline" onClick={handleCopy} className="rounded-xl">
+                {copied ? <CheckCheck className="w-4 h-4 mr-1.5 text-emerald-400" /> : <Copy className="w-4 h-4 mr-1.5" />}
+                {copied ? 'Copiado!' : 'Copiar Link'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => window.open(bookingUrl, '_blank')} className="rounded-xl">
+                <ExternalLink className="w-4 h-4 mr-1.5" />
+                Visualizar
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Partilhe este link com os seus clientes para agendamentos online.
+            </p>
+          </>
+        ) : (
+          <div className="text-center py-2 space-y-2">
+            <Globe className="w-10 h-10 text-muted-foreground/40 mx-auto" />
+            <p className="text-sm font-medium">Vitrine Offline</p>
+            <p className="text-xs text-muted-foreground">
+              {!slug ? 'Defina um slug (URL) abaixo para ativar a vitrine.' : 'Ative o interruptor para tornar a página pública.'}
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─────────────────────────────────────────
+// MAIN UNIT PAGE
+// ─────────────────────────────────────────
 export default function Unit() {
   const { data: unit, isLoading } = useUnit();
   const { user } = useAuth();
@@ -35,12 +104,8 @@ export default function Unit() {
   const { toast } = useToast();
 
   const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    address: '',
-    accepts_home_visits: false,
-    is_published: false,
-    slug: '',
+    name: '', phone: '', address: '',
+    accepts_home_visits: false, is_published: false, slug: '',
   });
   const [businessHours, setBusinessHours] = useState<BusinessHours>(defaultHours());
   const [saving, setSaving] = useState(false);
@@ -49,7 +114,7 @@ export default function Unit() {
     if (unit) {
       setForm({
         name: unit.name || '',
-        phone: unit.phone || '',
+        phone: (unit as any).phone || '',
         address: unit.address || '',
         accepts_home_visits: unit.accepts_home_visits || false,
         is_published: unit.is_published || false,
@@ -72,12 +137,10 @@ export default function Unit() {
         await supabase.from('units').insert({ ...payload, owner_id: user!.id });
       }
       queryClient.invalidateQueries({ queryKey: ['unit'] });
-      toast({ title: 'Informações guardadas!' });
+      toast({ title: 'Informações guardadas! ✅' });
     } catch {
       toast({ variant: 'destructive', title: 'Erro ao guardar.' });
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const setDay = (key: string, field: string, value: boolean | string) =>
@@ -92,8 +155,16 @@ export default function Unit() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-4 space-y-6 pb-24">
-      {/* Business Info */}
+    <div className="max-w-xl mx-auto px-4 py-4 space-y-6 pb-28">
+
+      {/* ── BOOKING LINK (The Magic Public Section) ── */}
+      <BookingLinkCard
+        slug={form.slug}
+        isPublished={form.is_published}
+        onPublish={v => setForm(f => ({ ...f, is_published: v }))}
+      />
+
+      {/* ── Business Info ── */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Informações do Negócio</h2>
         <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-4">
@@ -112,14 +183,24 @@ export default function Unit() {
             </div>
           )}
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-2"><Link className="w-4 h-4" />Slug (URL)</Label>
-            <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="barbearia-silva" />
-            {form.slug && <p className="text-xs text-muted-foreground">lumina.app/{form.slug}</p>}
+            <Label className="flex items-center gap-2"><Link className="w-4 h-4" />URL do Negócio (Slug)</Label>
+            <div className="flex gap-2">
+              <div className="flex items-center flex-1 bg-muted rounded-xl border border-border/50 px-3 gap-1">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">/s/</span>
+                <input
+                  value={form.slug}
+                  onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                  placeholder="barbearia-silva"
+                  className="flex-1 bg-transparent py-2 text-sm outline-none"
+                />
+              </div>
+            </div>
+            {form.slug && <p className="text-xs text-muted-foreground pl-1">✅ {window.location.origin}/s/{form.slug}</p>}
           </div>
         </div>
       </section>
 
-      {/* Modality */}
+      {/* ── Modality ── */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Modalidade</h2>
         <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/50">
@@ -130,17 +211,10 @@ export default function Unit() {
             </div>
             <Switch checked={form.accepts_home_visits} onCheckedChange={v => setForm(f => ({ ...f, accepts_home_visits: v }))} />
           </div>
-          <div className="flex items-center justify-between p-4">
-            <div>
-              <p className="font-medium">Perfil Público</p>
-              <p className="text-xs text-muted-foreground">Visível na vitrine online</p>
-            </div>
-            <Switch checked={form.is_published} onCheckedChange={v => setForm(f => ({ ...f, is_published: v }))} />
-          </div>
         </div>
       </section>
 
-      {/* Business Hours */}
+      {/* ── Business Hours ── */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Horários de Funcionamento</h2>
         <div className="bg-card border border-border/50 rounded-2xl divide-y divide-border/50">

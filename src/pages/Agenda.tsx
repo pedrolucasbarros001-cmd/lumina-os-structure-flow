@@ -7,19 +7,24 @@ import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import NewAppointmentSheet from '@/components/NewAppointmentSheet';
 import AppointmentDetailSheet from '@/components/AppointmentDetailSheet';
+import AgendaTutorialOverlay, { useAgendaTutorial } from '@/components/AgendaTutorialOverlay';
 import { cn } from '@/lib/utils';
 
-const STATUS_STYLES: Record<Appointment['status'], string> = {
+const STATUS_STYLES: Record<string, string> = {
   pending_approval: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300',
   confirmed: 'bg-blue-500/20 border-blue-500/50 text-blue-300',
+  in_transit: 'bg-yellow-500/30 border-yellow-500 text-yellow-200',
+  arrived: 'bg-emerald-500/30 border-emerald-500 text-emerald-200',
   completed: 'bg-muted/60 border-border text-muted-foreground',
   cancelled: 'bg-red-500/10 border-red-500/30 text-red-400',
   no_show: 'bg-orange-500/10 border-orange-500/30 text-orange-400',
 };
 
-const STATUS_LABELS: Record<Appointment['status'], string> = {
+const STATUS_LABELS: Record<string, string> = {
   pending_approval: 'Pendente',
   confirmed: 'Confirmado',
+  in_transit: '🚗 Em trânsito',
+  arrived: '📍 Em atendimento',
   completed: 'Concluído',
   cancelled: 'Cancelado',
   no_show: 'Faltou',
@@ -99,6 +104,7 @@ export default function Agenda() {
   const [selected, setSelected] = useState(new Date());
   const [newOpen, setNewOpen] = useState(false);
   const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+  const { show: showTutorial, dismiss: dismissTutorial } = useAgendaTutorial();
 
   const dateStr = format(selected, 'yyyy-MM-dd');
   const { data: appointments = [], isLoading } = useAppointments(dateStr);
@@ -108,7 +114,10 @@ export default function Agenda() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)]">
+    <div className="flex flex-col h-[calc(100vh-56px)] relative">
+      {/* Tutorial Overlay — renders on top of everything, once per device */}
+      {showTutorial && <AgendaTutorialOverlay onFinish={dismissTutorial} />}
+
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10 space-y-3">
         {/* Month + nav */}
