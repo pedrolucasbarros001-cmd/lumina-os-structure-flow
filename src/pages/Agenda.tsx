@@ -1,194 +1,373 @@
-import { useState } from 'react';
-import { format, addDays, subDays, parseISO, startOfWeek, isSameDay } from 'date-fns';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { format, parseISO, addMinutes } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Clock } from 'lucide-react';
-import { useAppointments, Appointment } from '@/hooks/useAppointments';
-import { useServices } from '@/hooks/useServices';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { useAppointments, Appointment, useCreateAppointment } from '@/hooks/useAppointments';
+import { useRescheduleAppointment } from '@/hooks/useRescheduleAppointment';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
-import NewAppointmentSheet from '@/components/NewAppointmentSheet';
+import { useServices } from '@/hooks/useServices';
 import AppointmentDetailSheet from '@/components/AppointmentDetailSheet';
+import NewAppointmentFlow from '@/components/NewAppointmentFlow';
 import AgendaTutorialOverlay, { useAgendaTutorial } from '@/components/AgendaTutorialOverlay';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-const STATUS_STYLES: Record<string, string> = {
-  pending_approval: 'bg-yellow-500/20 border-yellow-500/50 text-yellow-300',
-  confirmed: 'bg-blue-500/20 border-blue-500/50 text-blue-300',
-  in_transit: 'bg-yellow-500/30 border-yellow-500 text-yellow-200',
-  arrived: 'bg-emerald-500/30 border-emerald-500 text-emerald-200',
-  completed: 'bg-muted/60 border-border text-muted-foreground',
-  cancelled: 'bg-red-500/10 border-red-500/30 text-red-400',
-  no_show: 'bg-orange-500/10 border-orange-500/30 text-orange-400',
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+const HOUR_HEIGHT = 64; // px per hour
+const PX_PER_MIN = HOUR_HEIGHT / 60;
+const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
+const COL_WIDTH = 150; // px per team member column
+const TIME_AXIS_W = 52; // px for left time axis
+
+const STATUS_COLORS: Record<string, string> = {
+  pending_approval: '#f59e0b',
+  confirmed: '#6366f1',
+  in_transit: '#f59e0b',
+  arrived: '#10b981',
+  completed: '#6b7280',
+  cancelled: '#ef4444',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending_approval: 'Pendente',
-  confirmed: 'Confirmado',
-  in_transit: '🚗 Em trânsito',
-  arrived: '📍 Em atendimento',
-  completed: 'Concluído',
-  cancelled: 'Cancelado',
-  no_show: 'Faltou',
-};
+function topForTime(datetime: string) {
+  const d = parseISO(datetime);
+  return (d.getHours() * 60 + d.getMinutes()) * PX_PER_MIN;
+}
 
-// Horizontal day strip for week navigation
-function WeekStrip({ selected, onChange }: { selected: Date; onChange: (d: Date) => void }) {
-  const startDay = startOfWeek(selected, { weekStartsOn: 1 });
+function heightForDuration(minutes: number) {
+  return Math.max(minutes * PX_PER_MIN, HOUR_HEIGHT * 0.6);
+}
+
+// ─────────────────────────────────────────
+// APPOINTMENT BLOCK
+// ─────────────────────────────────────────
+function ApptBlock({
+  appt, services, onClick, onDragStart,
+}: {
+  appt: Appointment;
+  services: ReturnType<typeof useServices>['data'];
+  onClick: () => void;
+  onDragStart: (e: React.TouchEvent | React.MouseEvent, appt: Appointment) => void;
+}) {
+  const top = topForTime(appt.datetime);
+  const durationMin = (appt as any).duration_minutes || 60;
+  const height = heightForDuration(durationMin);
+  const svc = (services || []).find(s => appt.service_ids?.includes(s.id));
+  const startStr = format(parseISO(appt.datetime), 'HH:mm');
+  const endStr = format(addMinutes(parseISO(appt.datetime), durationMin), 'HH:mm');
+  const color = STATUS_COLORS[appt.status] || '#6366f1';
+
+  let touchTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchTimer.current = setTimeout(() => {
+      onDragStart(e, appt);
+    }, 500);
+  };
+  const handleTouchEnd = () => { clearTimeout(touchTimer.current); };
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-      {Array.from({ length: 7 }).map((_, i) => {
-        const day = addDays(startDay, i);
-        const isToday = isSameDay(day, new Date());
-        const isSelected = isSameDay(day, selected);
-        return (
-          <button
-            key={i}
-            onClick={() => onChange(day)}
-            className={cn(
-              'flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all min-w-[48px]',
-              isSelected ? 'bg-primary text-primary-foreground' : isToday ? 'border border-primary/50 text-primary' : 'text-muted-foreground hover:bg-muted'
-            )}
-          >
-            <span className="text-[10px] font-medium uppercase">{format(day, 'EEE', { locale: pt })}</span>
-            <span className="text-lg font-bold leading-none">{format(day, 'd')}</span>
-          </button>
-        );
-      })}
+    <div
+      style={{ top, height, left: 4, right: 4, position: 'absolute', backgroundColor: color + '33', borderLeft: `3px solid ${color}`, borderRadius: 8 }}
+      className="cursor-pointer p-1.5 overflow-hidden select-none active:scale-[0.98] transition-transform"
+      onClick={onClick}
+      onMouseDown={(e) => onDragStart(e, appt)}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <p className="text-[10px] font-semibold leading-tight" style={{ color }}>
+        {startStr} – {endStr} {appt.client_name}
+      </p>
+      {svc && <p className="text-[10px] text-muted-foreground truncate">{svc.name}</p>}
+      {(appt as any).type === 'home' && <p className="text-[9px] text-orange-400">🏠 Domicílio</p>}
     </div>
   );
 }
 
-// Appointment Card
-function AppointmentCard({ appt, onClick }: { appt: Appointment; onClick: () => void }) {
-  const time = format(parseISO(appt.datetime), 'HH:mm');
-  const isHome = appt.type === 'home';
-  const isPaid = appt.status === 'completed';
-
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        'w-full text-left p-3 rounded-xl border transition-all hover:scale-[1.01] active:scale-[0.99]',
-        STATUS_STYLES[appt.status]
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <Clock className="w-3 h-3 shrink-0" />
-            <span className="text-xs font-mono">{time}</span>
-            {isHome && <MapPin className="w-3 h-3 text-orange-400 shrink-0" />}
-          </div>
-          <p className="font-semibold text-sm truncate">{appt.client_name || 'Cliente'}</p>
-          {appt.address && <p className="text-xs opacity-70 truncate">{appt.address}</p>}
-        </div>
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {appt.value! > 0 && (
-            <span className="text-xs font-bold">€{appt.value!.toFixed(2)}</span>
-          )}
-          {isPaid && (
-            <span className="px-1.5 py-0.5 text-[9px] font-bold bg-black/60 text-white rounded uppercase tracking-wider">Pago</span>
-          )}
-          <span className={cn(
-            'text-[10px] px-1.5 py-0.5 rounded uppercase tracking-wide font-medium',
-          )}>
-            {STATUS_LABELS[appt.status]}
-          </span>
-        </div>
-      </div>
-    </button>
-  );
-}
-
+// ─────────────────────────────────────────
+// MAIN AGENDA PAGE
+// ─────────────────────────────────────────
 export default function Agenda() {
-  const [selected, setSelected] = useState(new Date());
-  const [newOpen, setNewOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+  const [newApptOpen, setNewApptOpen] = useState(false);
+  const [newApptTime, setNewApptTime] = useState<{ hour: number; teamMemberId?: string } | null>(null);
+  const [rescheduleModal, setRescheduleModal] = useState<{ appt: Appointment; newTime: Date; newTeamMemberId?: string } | null>(null);
   const { show: showTutorial, dismiss: dismissTutorial } = useAgendaTutorial();
+  const { toast } = useToast();
+  const reschedule = useRescheduleAppointment();
 
-  const dateStr = format(selected, 'yyyy-MM-dd');
-  const { data: appointments = [], isLoading } = useAppointments(dateStr);
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+  const { data: appointments = [] } = useAppointments(dateStr);
+  const { data: team = [] } = useTeamMembers();
+  const { data: services = [] } = useServices();
 
-  const sorted = [...appointments].sort(
-    (a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
-  );
+  // Time = pixel position from 8am by default, auto-scroll to current time
+  const gridRef = useRef<HTMLDivElement>(null);
+  const now = new Date();
+  const nowTop = (now.getHours() * 60 + now.getMinutes()) * PX_PER_MIN;
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const scrollTo = Math.max(0, nowTop - 100);
+      gridRef.current.scrollTop = scrollTo;
+    }
+  }, []);
+
+  // Long-press to create on time axis
+  const longPressTimer = useRef<ReturnType<typeof setTimeout>>();
+  const handleTimeAxisPress = (hour: number) => {
+    longPressTimer.current = setTimeout(() => {
+      setNewApptTime({ hour });
+      setNewApptOpen(true);
+    }, 500);
+  };
+
+  // Drag-to-reschedule (simplified — tracks touch position)
+  const dragAppt = useRef<Appointment | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [dragY, setDragY] = useState(0);
+
+  const handleDragStart = useCallback((e: React.TouchEvent | React.MouseEvent, appt: Appointment) => {
+    dragAppt.current = appt;
+    setDragging(true);
+  }, []);
+
+  const handleDragMove = useCallback((e: React.TouchEvent | React.MouseEvent) => {
+    if (!dragging || !dragAppt.current) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+    setDragX(clientX);
+    setDragY(clientY);
+  }, [dragging]);
+
+  const handleDragEnd = useCallback(() => {
+    if (!dragging || !dragAppt.current || !gridRef.current) { setDragging(false); return; }
+    const rect = gridRef.current.getBoundingClientRect();
+    const relY = dragY - rect.top + gridRef.current.scrollTop;
+    const relX = dragX - rect.left + gridRef.current.scrollLeft - TIME_AXIS_W;
+
+    // Calculate new time (15 min increments)
+    const minutes = Math.round(relY / PX_PER_MIN / 15) * 15;
+    const newTime = new Date(selectedDate);
+    newTime.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+
+    // Calculate new team member
+    const colIdx = Math.max(0, Math.floor(relX / COL_WIDTH));
+    const newMemberId = columns[colIdx]?.id !== '__solo' ? columns[colIdx]?.id : null;
+
+    setRescheduleModal({
+      appt: dragAppt.current,
+      newTime,
+      newTeamMemberId: newMemberId || undefined
+    });
+    dragAppt.current = null;
+    setDragging(false);
+  }, [dragging, dragY, dragX, selectedDate, columns]);
+
+  const confirmReschedule = async () => {
+    if (!rescheduleModal) return;
+    await reschedule.mutateAsync({
+      id: rescheduleModal.appt.id,
+      datetime: rescheduleModal.newTime.toISOString(),
+      team_member_id: rescheduleModal.newTeamMemberId || (rescheduleModal.appt as any).team_member_id
+    } as any);
+    toast({ title: '✅ Agendamento atualizado!' });
+    setRescheduleModal(null);
+  };
+
+  // Columns: each team member
+  const columns = team.length > 0 ? team : [{ id: '__solo', name: 'Eu', avatar_url: null }];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] relative">
-      {/* Tutorial Overlay — renders on top of everything, once per device */}
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
       {showTutorial && <AgendaTutorialOverlay onFinish={dismissTutorial} />}
 
-      {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-10 space-y-3">
-        {/* Month + nav */}
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs text-muted-foreground">{format(selected, 'MMMM yyyy', { locale: pt })}</p>
+      {/* ── TOP HEADER ── */}
+      <div className="shrink-0 border-b border-border/50 bg-background/90 backdrop-blur-md z-20">
+        {/* Date navigation */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <button onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() - 1); return n; })}
+            className="p-2 rounded-full hover:bg-muted transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button className="flex items-center gap-2 text-sm font-semibold">
+            {format(selectedDate, "EEEE d 'de' MMM", { locale: pt })}
+            <ChevronRight className="w-4 h-4 text-muted-foreground rotate-90" />
+          </button>
+          <button onClick={() => setSelectedDate(d => { const n = new Date(d); n.setDate(n.getDate() + 1); return n; })}
+            className="p-2 rounded-full hover:bg-muted transition-colors">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Team member columns header */}
+        <div className="flex" style={{ paddingLeft: TIME_AXIS_W }}>
+          {columns.map(m => (
+            <div key={m.id} className="shrink-0 flex flex-col items-center gap-1 py-2 border-r border-border/30 last:border-r-0" style={{ width: COL_WIDTH }}>
+              <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
+                {(m.name || '?')[0].toUpperCase()}
+              </div>
+              <span className="text-[11px] text-muted-foreground truncate max-w-full px-1">{m.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Reschedule banner */}
+      {rescheduleModal && (
+        <div className="shrink-0 bg-primary/10 border-b border-primary/30 px-4 py-2 flex items-center justify-between z-30">
+          <span className="text-sm font-medium">
+            Remarcar para {format(rescheduleModal.newTime, "HH:mm 'de' d MMM", { locale: pt })}
+          </span>
+          <button onClick={() => setRescheduleModal(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+        </div>
+      )}
+
+      {/* ── GRID BODY ── */}
+      <div
+        ref={gridRef}
+        className="flex-1 overflow-y-auto overflow-x-auto relative"
+        onMouseMove={handleDragMove}
+        onTouchMove={handleDragMove}
+        onMouseUp={handleDragEnd}
+        onTouchEnd={handleDragEnd}
+      >
+        <div style={{ position: 'relative', height: HOUR_HEIGHT * 24, display: 'flex' }}>
+          {/* Time axis */}
+          <div className="shrink-0 sticky left-0 z-10 bg-background" style={{ width: TIME_AXIS_W }}>
+            {HOURS.map(h => (
+              <div key={h}
+                style={{ height: HOUR_HEIGHT, position: 'relative' }}
+                onMouseDown={() => handleTimeAxisPress(h)}
+                onTouchStart={() => handleTimeAxisPress(h)}
+                onMouseUp={() => clearTimeout(longPressTimer.current)}
+                onTouchEnd={() => clearTimeout(longPressTimer.current)}
+              >
+                <span className={cn(
+                  'absolute -top-2.5 right-2 text-[10px] font-mono',
+                  h === now.getHours() && format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd')
+                    ? 'text-red-400 font-bold' : 'text-muted-foreground'
+                )}>
+                  {String(h).padStart(2, '0')}:00
+                </span>
+              </div>
+            ))}
+            {/* Current time indicator */}
+            {format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && (
+              <div style={{ position: 'absolute', top: nowTop, left: 0, right: 0, zIndex: 20 }}>
+                <div className="flex items-center">
+                  <span className="bg-red-500 text-white text-[9px] font-bold px-1 rounded-sm mr-0.5">
+                    {format(now, 'HH:mm')}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-1">
+
+          {/* Team columns */}
+          {columns.map(member => {
+            const colAppts = appointments.filter(a => (a as any).team_member_id === member.id || team.length === 0);
+            return (
+              <div key={member.id}
+                className="shrink-0 border-l border-border/30 relative"
+                style={{ width: COL_WIDTH }}
+                onMouseDown={(e) => {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const relY = e.clientY - rect.top + (gridRef.current?.scrollTop || 0);
+                  const hour = Math.floor(relY / HOUR_HEIGHT);
+                  longPressTimer.current = setTimeout(() => {
+                    setNewApptTime({ hour, teamMemberId: member.id !== '__solo' ? member.id : undefined });
+                    setNewApptOpen(true);
+                  }, 450);
+                }}
+                onMouseUp={() => clearTimeout(longPressTimer.current)}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  const relY = touch.clientY - rect.top + (gridRef.current?.scrollTop || 0);
+                  const hour = Math.floor(relY / HOUR_HEIGHT);
+                  longPressTimer.current = setTimeout(() => {
+                    setNewApptTime({ hour, teamMemberId: member.id !== '__solo' ? member.id : undefined });
+                    setNewApptOpen(true);
+                  }, 450);
+                }}
+                onTouchEnd={() => clearTimeout(longPressTimer.current)}
+              >
+                {/* Hour lines */}
+                {HOURS.map(h => (
+                  <div key={h} style={{ height: HOUR_HEIGHT }} className="border-b border-border/20" />
+                ))}
+
+                {/* Current time red line */}
+                {format(selectedDate, 'yyyy-MM-dd') === format(now, 'yyyy-MM-dd') && (
+                  <div style={{ position: 'absolute', top: nowTop, left: 0, right: 0, height: 1, backgroundColor: '#ef4444', zIndex: 10 }} />
+                )}
+
+                {/* Appointment blocks */}
+                {colAppts.map(appt => (
+                  <ApptBlock
+                    key={appt.id}
+                    appt={appt}
+                    services={services}
+                    onClick={() => setDetailAppt(appt)}
+                    onDragStart={handleDragStart}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── FAB ── */}
+      <button
+        onClick={() => { setNewApptTime(null); setNewApptOpen(true); }}
+        className="fixed bottom-6 right-5 w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/40 flex items-center justify-center z-30 hover:bg-primary/90 active:scale-95 transition-all"
+      >
+        <Plus className="w-7 h-7 text-white" />
+      </button>
+
+      {/* ── RESCHEDULE CONFIRM MODAL ── */}
+      {rescheduleModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-end">
+          <div className="w-full bg-card rounded-t-3xl p-6 space-y-4 border-t border-border/50">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold">Atualizar agendamento</h3>
+              <button onClick={() => setRescheduleModal(null)} className="text-muted-foreground">✕</button>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/30">
+              <input type="checkbox" className="w-5 h-5 rounded accent-primary" defaultChecked />
+              <div>
+                <p className="font-medium text-sm">Notificar {rescheduleModal.appt.client_name} sobre a remarcação</p>
+                <p className="text-xs text-muted-foreground">Enviar uma mensagem informando que o agendamento foi remarcado</p>
+              </div>
+            </div>
             <button
-              onClick={() => setSelected(d => subDays(d, 7))}
-              className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
+              onClick={confirmReschedule}
+              disabled={reschedule.isPending}
+              className="w-full h-12 bg-primary text-white rounded-2xl font-bold text-base"
             >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setSelected(new Date())}
-              className="px-3 h-8 rounded-full hover:bg-muted text-xs font-medium transition-colors"
-            >
-              Hoje
-            </button>
-            <button
-              onClick={() => setSelected(d => addDays(d, 7))}
-              className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
+              {reschedule.isPending ? 'A remarcar...' : 'Atualizar'}
             </button>
           </div>
         </div>
-        <WeekStrip selected={selected} onChange={setSelected} />
-      </div>
+      )}
 
-      {/* Appointments */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-20 rounded-xl bg-muted/40 animate-pulse" />
-            ))}
-          </div>
-        ) : sorted.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
-              <Plus className="w-7 h-7 text-muted-foreground" />
-            </div>
-            <div>
-              <p className="font-semibold">Sem agendamentos</p>
-              <p className="text-sm text-muted-foreground">Toque no botão + para criar uma reserva</p>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-xs text-muted-foreground font-medium">
-              {sorted.length} agendamento{sorted.length !== 1 ? 's' : ''}
-            </p>
-            {sorted.map(appt => (
-              <AppointmentCard key={appt.id} appt={appt} onClick={() => setDetailAppt(appt)} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      <NewAppointmentSheet
-        open={newOpen}
-        onClose={() => setNewOpen(false)}
-        prefillDate={dateStr}
-      />
-
+      {/* ── DETAIL SHEET ── */}
       {detailAppt && (
-        <AppointmentDetailSheet
-          appointment={detailAppt}
-          onClose={() => setDetailAppt(null)}
+        <AppointmentDetailSheet appointment={detailAppt} onClose={() => setDetailAppt(null)} />
+      )}
+
+      {/* ── NEW APPOINTMENT FLOW ── */}
+      {newApptOpen && (
+        <NewAppointmentFlow
+          initialHour={newApptTime?.hour ?? now.getHours()}
+          initialTeamMemberId={newApptTime?.teamMemberId}
+          selectedDate={selectedDate}
+          onClose={() => setNewApptOpen(false)}
         />
       )}
     </div>

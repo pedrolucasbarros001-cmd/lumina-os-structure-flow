@@ -24,8 +24,9 @@ export default function Signup() {
     setLoading(true);
     try {
       await signUp(email, password, fullName);
-      toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar.' });
-      navigate('/login');
+      toast({ title: 'Conta criada! 🎉', description: 'Vamos configurar a sua empresa.' });
+      navigate('/onboarding');
+
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {

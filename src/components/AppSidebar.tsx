@@ -34,7 +34,7 @@ const NAV_ITEMS = [
   { key: 'clients', label: 'Clientes', path: '/clients', icon: Users },
   { key: 'catalogo', label: 'Catálogo', path: '/catalogo', icon: ShoppingBag },
   { key: 'team', label: 'Equipa', path: '/team', icon: UserCog },
-  { key: 'unit', label: 'A Minha Unidade', path: '/unit', icon: Building2 },
+  { key: 'empresa', label: 'Minha Empresa', path: '/empresa', icon: Building2 },
   { key: 'settings', label: 'Configurações', path: '/settings', icon: Settings },
 ];
 

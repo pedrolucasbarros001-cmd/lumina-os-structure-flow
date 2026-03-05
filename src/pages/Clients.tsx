@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import ClientDetailSheet from '@/components/ClientDetailSheet';
 
 function AddClientSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createClient = useCreateClient();
@@ -63,6 +64,7 @@ export default function Clients() {
   const { data: clients = [], isLoading } = useClients();
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -109,13 +111,20 @@ export default function Clients() {
         ) : (
           <div className="divide-y divide-border/30">
             {filtered.map(client => (
-              <ClientCard key={client.id} client={client} onClick={() => { }} />
+              <ClientCard key={client.id} client={client} onClick={() => setSelectedClient(client)} />
             ))}
           </div>
         )}
       </div>
 
       <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      {selectedClient && (
+        <ClientDetailSheet
+          client={selectedClient}
+          open={!!selectedClient}
+          onClose={() => setSelectedClient(null)}
+        />
+      )}
     </div>
   );
 }
