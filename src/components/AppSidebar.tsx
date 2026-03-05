@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnit } from '@/hooks/useUnit';
 import {
   Sidebar,
   SidebarContent,
@@ -43,6 +44,12 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { signOut } = useAuth();
   const location = useLocation();
+  const { data: unit } = useUnit();
+
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.key === 'team' && unit?.business_type === 'solo') return false;
+    return true;
+  });
 
   return (
     <Sidebar collapsible="icon">
@@ -60,7 +67,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild>
                     <NavLink

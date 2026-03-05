@@ -20,6 +20,7 @@ import Services from "./pages/Services";
 import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,9 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Onboarding */}
+            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
             {/* Protected panel routes */}
             <Route path="/" element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>

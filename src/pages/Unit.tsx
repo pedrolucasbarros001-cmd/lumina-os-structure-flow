@@ -105,10 +105,12 @@ export default function Unit() {
             <Label className="flex items-center gap-2"><Phone className="w-4 h-4" />Telefone</Label>
             <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+351 912 345 678" />
           </div>
-          <div className="space-y-1.5">
-            <Label className="flex items-center gap-2"><MapPin className="w-4 h-4" />Endereço</Label>
-            <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, cidade" />
-          </div>
+          {unit?.logistics_type !== 'home' && (
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-2"><MapPin className="w-4 h-4" />Endereço</Label>
+              <Input value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="Rua, número, cidade" />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label className="flex items-center gap-2"><Link className="w-4 h-4" />Slug (URL)</Label>
             <Input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="barbearia-silva" />
