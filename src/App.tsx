@@ -13,14 +13,15 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Agenda from "./pages/Agenda";
-import Appointments from "./pages/Appointments";
 import Clients from "./pages/Clients";
 import Team from "./pages/Team";
-import Services from "./pages/Services";
+import Catalogo from "./pages/Catalogo";
 import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
+import ProgressiveSetup from "./pages/ProgressiveSetup";
+import PublicBooking from "./pages/PublicBooking";
 
 const queryClient = new QueryClient();
 
@@ -38,18 +39,23 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Onboarding */}
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+            {/* Public booking page — no auth required */}
+            <Route path="/s/:slug" element={<PublicBooking />} />
+
+            {/* Onboarding (Phase 1) */}
+            <Route path="/onboarding" element={<ProtectedRoute requireSetup={false}><Onboarding /></ProtectedRoute>} />
+
+            {/* Progressive Setup (Phase 2 - no sidebar) */}
+            <Route path="/setup" element={<ProtectedRoute requireSetup={false}><ProgressiveSetup /></ProtectedRoute>} />
 
             {/* Protected panel routes */}
             <Route path="/" element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="agenda" element={<Agenda />} />
-              <Route path="appointments" element={<Appointments />} />
               <Route path="clients" element={<Clients />} />
               <Route path="team" element={<Team />} />
-              <Route path="services" element={<Services />} />
+              <Route path="catalogo" element={<Catalogo />} />
               <Route path="unit" element={<Unit />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
