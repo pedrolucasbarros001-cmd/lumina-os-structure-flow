@@ -16,7 +16,7 @@ import Agenda from "./pages/Agenda";
 import Clients from "./pages/Clients";
 import Team from "./pages/Team";
 import Catalogo from "./pages/Catalogo";
-import Empresa from "./pages/Empresa";
+import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
@@ -56,8 +56,7 @@ const App = () => (
               <Route path="clients" element={<Clients />} />
               <Route path="team" element={<Team />} />
               <Route path="catalogo" element={<Catalogo />} />
-              <Route path="unit" element={<Empresa />} />
-              <Route path="empresa" element={<Empresa />} />
+              <Route path="unit" element={<Unit />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
 
