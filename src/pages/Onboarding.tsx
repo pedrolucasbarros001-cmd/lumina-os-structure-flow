@@ -69,10 +69,15 @@ export default function Onboarding() {
                 accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid'
             });
 
-            // 3. Mark Onboarding as Completed
+            // 3. Mark Onboarding as Completed + save profile preferences
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ onboarding_completed: true })
+                .update({
+                    onboarding_completed: true,
+                    business_type: businessType,
+                    service_model: logisticsType,
+                    team_size: businessType === 'team' ? teamSize : null,
+                })
                 .eq('id', user.id);
 
             if (profileError) throw profileError;
