@@ -408,12 +408,14 @@ export type Database = {
           accepts_home_visits: boolean
           address: string | null
           business_hours: Json
+          business_type: string | null
           cover_url: string | null
           coverage_radius_km: number
           created_at: string
           id: string
           is_published: boolean
           latitude: number | null
+          logistics_type: string | null
           logo_url: string | null
           longitude: number | null
           name: string
@@ -426,12 +428,14 @@ export type Database = {
           accepts_home_visits?: boolean
           address?: string | null
           business_hours?: Json
+          business_type?: string | null
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
           id?: string
           is_published?: boolean
           latitude?: number | null
+          logistics_type?: string | null
           logo_url?: string | null
           longitude?: number | null
           name: string
@@ -444,12 +448,14 @@ export type Database = {
           accepts_home_visits?: boolean
           address?: string | null
           business_hours?: Json
+          business_type?: string | null
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
           id?: string
           is_published?: boolean
           latitude?: number | null
+          logistics_type?: string | null
           logo_url?: string | null
           longitude?: number | null
           name?: string
