@@ -206,6 +206,7 @@ export default function Agenda() {
   // ─── Long Press on empty grid ───
   const handleGridPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (dragAppt) return;
+    e.preventDefault();
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect) return;
     const relX = e.clientX - rect.left;
@@ -224,7 +225,7 @@ export default function Agenda() {
       setPrefillTime(timeStr);
       setPrefillTeamMemberId(columns[colIdx].id === '__self' ? '' : columns[colIdx].id);
       setNewOpen(true);
-    }, 500);
+    }, 300);
   }, [columns, dateStr, dragAppt]);
 
   const handleGridPointerMove = useCallback((e: React.PointerEvent) => {
@@ -272,6 +273,7 @@ export default function Agenda() {
   // ─── Long press on appointment (start drag) ───
   const handleApptLongPressStart = useCallback((e: React.PointerEvent, appt: Appointment) => {
     e.stopPropagation();
+    e.preventDefault();
     longPressStartPos.current = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
@@ -283,7 +285,7 @@ export default function Agenda() {
         const colIdx = Math.max(0, Math.min(columns.length - 1, Math.floor((e.clientX - rect.left - TIME_LABEL_WIDTH) / colWidth)));
         setDragColIndex(colIdx);
       }
-    }, 500);
+    }, 300);
   }, [columns]);
 
   const cancelDrag = () => {
@@ -397,7 +399,8 @@ export default function Agenda() {
       {/* ─── Time Grid ─── */}
       <div
         ref={gridRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative touch-pan-y"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative select-none"
+        style={{ touchAction: 'manipulation' }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
