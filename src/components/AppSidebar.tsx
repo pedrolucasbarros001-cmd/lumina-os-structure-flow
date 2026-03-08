@@ -57,15 +57,8 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="glass-surface border-r border-border/30">
       <SidebarContent>
-        <div className="px-4 py-5">
-          {!collapsed && (
-            <h2 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              LUMINA OS
-            </h2>
-          )}
-          {collapsed && (
-            <span className="text-lg font-bold text-primary">L</span>
-          )}
+        <div className="px-3 py-4">
+          <CompanySwitcher collapsed={collapsed} />
         </div>
         <SidebarGroup>
           <SidebarGroupContent>
