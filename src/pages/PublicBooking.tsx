@@ -105,12 +105,15 @@ export default function PublicBooking() {
     setStep(s => s - 1);
   };
 
+  const [error, setError] = useState('');
+
   const handleSubmit = async () => {
     if (!unit) return;
     setSubmitting(true);
+    setError('');
     try {
       const datetime = `${format(selectedDate!, 'yyyy-MM-dd')}T${selectedTime}:00`;
-      await supabase.from('appointments').insert({
+      const { error: insertError } = await supabase.from('appointments').insert({
         unit_id: unit.id,
         service_ids: selectedServices.map(s => s.id),
         team_member_id: selectedPro === 'any' ? null : selectedPro,
@@ -122,10 +125,13 @@ export default function PublicBooking() {
         client_email: clientEmail || null,
         client_phone: clientPhone || null,
         status: 'pending_approval',
+        payment_status: 'unpaid',
       });
+      if (insertError) throw insertError;
       setSuccess(true);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setError(e?.message || 'Ocorreu um erro ao agendar. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
