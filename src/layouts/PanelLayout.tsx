@@ -30,7 +30,7 @@ export default function PanelLayout() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {!isAgenda && (
-            <header className="h-14 flex items-center border-b border-border/50 px-4 gap-3 sticky top-0 z-30 bg-background/80 backdrop-blur-md">
+            <header className="h-14 flex items-center border-b border-border/30 px-4 gap-3 sticky top-0 z-30 glass-surface">
               <SidebarTrigger className="shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-semibold truncate">{title}</h1>
@@ -52,7 +52,7 @@ export default function PanelLayout() {
             'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
             'w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40',
             'flex items-center justify-center',
-            'hover:scale-110 active:scale-95 transition-all duration-200',
+            'hover:scale-110 transition-all duration-200 haptic-press',
             'ring-4 ring-primary/20',
           )}
           aria-label="Ações rápidas"

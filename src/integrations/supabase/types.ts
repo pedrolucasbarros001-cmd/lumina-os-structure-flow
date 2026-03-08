@@ -152,6 +152,41 @@ export type Database = {
           },
         ]
       }
+      company_members: {
+        Row: {
+          commission_rate: number
+          company_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          commission_rate?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          commission_rate?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       join_requests: {
         Row: {
           created_at: string
@@ -320,6 +355,39 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          owner_id: string
+          plan_type: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id: string
+          plan_type?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id?: string
+          plan_type?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_member_services: {
         Row: {
           id: string
@@ -420,8 +488,10 @@ export type Database = {
           logo_url: string | null
           longitude: number | null
           name: string
+          nif: string | null
           owner_id: string
           phone: string | null
+          settings_json: Json
           slug: string | null
           updated_at: string
         }
@@ -441,8 +511,10 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           name: string
+          nif?: string | null
           owner_id: string
           phone?: string | null
+          settings_json?: Json
           slug?: string | null
           updated_at?: string
         }
@@ -462,8 +534,10 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           name?: string
+          nif?: string | null
           owner_id?: string
           phone?: string | null
+          settings_json?: Json
           slug?: string | null
           updated_at?: string
         }
@@ -492,6 +566,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_plan_limit: {
+        Args: { _owner_id: string; _resource: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -499,6 +577,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_company_owner: { Args: { _company_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "team_member"

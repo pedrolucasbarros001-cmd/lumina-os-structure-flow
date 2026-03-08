@@ -1,131 +1,129 @@
 
 
-# LUMINA OS — Visual & Architectural Evolution Plan
+# LUMINA OS — Full Implementation Plan
 
-## What You're Asking For
-
-A major visual and structural upgrade across two dimensions:
-
-1. **Design System overhaul** — Pure black (#000000) background with aurora light effects, true glassmorphism (5% white + backdrop-blur), squircle corners everywhere, staggered cascade animations, rolling numbers (already partially done), and haptic-style feedback on key actions.
-
-2. **Multi-tenant architecture** — One user can own multiple companies (like Meta Business Suite), with a subscriptions/plans system that enforces limits (Monthly: 1 company, 4 staff; Annual: 3 companies, 4 staff/each).
-
-This is a **massive architectural change** that touches every file in the project. Here's a phased breakdown.
+## Overview
+LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
 
 ---
 
-## Phase A: Design System Overhaul (Visual Layer)
+## Phase 1: Foundation & Database
 
-### A1. `src/index.css` — Pure Black + Aurora Background
-- Change dark mode `--background` from `228 18% 8%` to `0 0% 0%` (pure #000000)
-- Change `--card` to `0 0% 100%` at 5% opacity (true glass)
-- Change `--sidebar-background` to pure black
-- Add aurora orbs as fixed pseudo-elements on `body::before` and `body::after`:
-  - Cobalt Blue sphere (`hsla(220, 90%, 55%, 0.3)`) + Amethyst Purple (`hsla(270, 80%, 55%, 0.3)`)
-  - `filter: blur(150px)`, positioned top-left and bottom-right, `pointer-events: none`
+### Database Schema (Supabase)
+- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
+- **services** — name, duration, price, description, image, unit_id
+- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
+- **team_member_services** — links team members to services they perform
+- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
+- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
+- **mobility_settings** — unit_id, base_fee, price_per_km
+- **user_roles** — user_id, role (owner, team_member) with RLS
 
-### A2. `src/index.css` — Glassmorphism Utility Update
-- Update `.frosted-glass` dark variant: `background: rgba(255,255,255,0.05)`, `border: 1px solid rgba(255,255,255,0.08)`, `backdrop-filter: blur(24px)`
-- Add `.glass-card` utility for cards: same glass treatment with `border-radius: 20px` (squircle feel)
+### Auth
+- Email + password authentication via Supabase Auth
+- Profile table linked to auth.users
+- Role-based access: owner vs team member
 
-### A3. Squircle Corners
-- Update `tailwind.config.ts`: increase `--radius` to `1rem`, add `xl: 1.25rem`, `2xl: 1.5rem`
-- Update `card.tsx`, `sheet.tsx`, `dialog.tsx` to use `rounded-2xl` by default
-
-### A4. Stagger Animation Enhancement
-- Already have `stagger-in` keyframe — enhance with per-child delay via CSS `nth-child` selectors (50ms increments)
-- Add `.stagger-container > *:nth-child(n)` rules for up to 20 children
-
-### A5. Haptic Feedback Simulation
-- Add a `.haptic-press` utility class: `active:scale-[0.97]` + short 30ms transition
-- Apply to all interactive buttons, cards, and nav items
-
-### A6. Apply Glass to All Surfaces
-- `AppSidebar.tsx`: Glass background instead of solid
-- `PanelLayout.tsx` header: Glass treatment
-- `AppointmentDetailSheet.tsx`, `QuickActionSheet.tsx`, `NewAppointmentSheet.tsx`: Glass modals
-- Dashboard cards: Replace `frosted-glass` with new `glass-card`
+### Multi-language
+- i18n system with PT and EN, language switcher in settings
 
 ---
 
-## Phase B: Multi-Tenant Architecture (Database + Auth)
+## Phase 2: Onboarding Flow (5 Steps)
 
-This is the structural shift from "1 user = 1 unit" to "1 user = N companies".
+A guided wizard that blocks access to the panel until complete:
 
-### B1. New Tables (Migration)
-
-```text
-subscriptions
-├── id (uuid PK)
-├── owner_id (FK profiles.id)
-├── plan_type ('monthly' | 'annual')
-├── status ('active' | 'cancelled' | 'trial')
-├── started_at, expires_at
-└── created_at, updated_at
-
-companies (evolves from 'units')
-├── Add: nif (text), settings_json (jsonb)
-├── Rename conceptually but keep 'units' table name to avoid massive migration
-└── No structural change needed — units already has all fields
-
-company_members (evolves from implicit owner_id)
-├── id (uuid PK)
-├── company_id (FK units.id)
-├── user_id (FK profiles.id)  
-├── role ('owner' | 'receptionist' | 'staff')
-├── commission_rate (numeric, default 0)
-└── created_at
-```
-
-### B2. RLS Policy Overhaul
-- Create `is_company_member(company_id uuid)` security definer function
-- Replace all `units.owner_id = auth.uid()` checks with `is_company_member` lookups
-- This allows staff/receptionists to access data too (not just owners)
-
-### B3. Plan Enforcement
-- Create `check_plan_limit(owner_id uuid, resource text)` DB function
-- Returns boolean: checks subscription plan vs count of companies/members
-- Frontend calls this before INSERT to show friendly error
-- DB trigger as safety net to reject inserts exceeding limits
-
-### B4. Company Switcher
-- New component: `CompanySwitcher.tsx` in the sidebar header
-- Dropdown showing all companies the user belongs to (via `company_members`)
-- Selected company stored in React context (`CompanyContext`)
-- All hooks (`useAppointments`, `useServices`, etc.) read from this context instead of `useUnit()`
-
-### B5. Context & Hook Refactor
-- New `src/contexts/CompanyContext.tsx`: stores `activeCompanyId`, `userRole`, `subscription`
-- `useUnit()` → `useCompany()` (reads from context)
-- All data hooks filter by `activeCompanyId` instead of `owner_id`
+1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
+2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
+3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
+4. **Mobility** — if home visits enabled: base fee + price/km
+5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
 
 ---
 
-## Files Changed Summary
+## Phase 3: Internal Panel
 
-| File | Action |
-|------|--------|
-| `src/index.css` | Pure black BG, aurora orbs, glass utilities, stagger enhancement |
-| `tailwind.config.ts` | Larger radius, squircle defaults |
-| `src/components/ui/card.tsx` | Squircle + glass defaults |
-| `src/components/ui/sheet.tsx` | Glass background |
-| `src/components/ui/dialog.tsx` | Glass background |
-| `src/components/AppSidebar.tsx` | Glass sidebar, company switcher slot |
-| `src/layouts/PanelLayout.tsx` | Glass header |
-| `src/pages/Dashboard.tsx` | Glass cards |
-| DB migration | Create `subscriptions`, `company_members` tables + RLS functions |
-| `src/contexts/CompanyContext.tsx` | **Create** — active company state |
-| `src/components/CompanySwitcher.tsx` | **Create** — sidebar company dropdown |
-| All hooks | Refactor to use `CompanyContext` |
+### Layout
+- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
+- Collapsible sidebar with icons
+- Active route highlighting
+
+### Agenda (Daily Operations)
+- Vertical time grid with columns per team member
+- Minimalist appointment cards showing client name + colored status bar
+- Drag & drop to reschedule, resize to adjust duration
+- Click opens a detailed side drawer with full appointment info and action buttons
+- No metrics or revenue on this view — pure operations
+
+### Atendimentos (Appointments Management)
+- Table with advanced filters: client, service, team member, date, type, status, value
+- Click opens drawer: client data, address (if home), services, status history, action buttons
+
+### Clientes
+- Clients appear only after a CONFIRMED appointment
+- Table: name, phone, email, total appointments, accumulated revenue, last visit
+- Click opens drawer with full history
+
+### Equipa
+- List: photo, name, role, home visits, linked services
+- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
+
+### Serviços
+- List: name, duration, price, # of team members, total sold, revenue
+- Click opens drawer with service analytics
+
+### Unidade
+- Edit unit details (same fields as onboarding step 1)
+
+### Configurações
+- Mobility settings, language, public page settings
 
 ---
 
-## Recommendation
+## Phase 4: Dashboard (Analytics)
 
-This is ~2-3 full implementation sessions worth of work. I recommend splitting into two approvals:
+### Overview Cards
+- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
 
-1. **First: Design System** (Phase A) — Pure visual, no DB changes, immediate impact
-2. **Second: Multi-Tenant** (Phase B) — Structural, requires careful migration
+### Team Performance
+- Table with per-member metrics + detailed drawer
 
-Which phase should I implement first?
+### Service Performance
+- Table with per-service metrics + detailed drawer
+
+### Schedule Structure
+- Occupancy heatmap
+- Most profitable time slot
+- Most profitable day
+
+### Global Filters
+- Date range, team member, service type
+
+---
+
+## Phase 5: Public Booking Page
+
+### Sequential Flow
+1. Select services from catalog
+2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
+3. Select valid time slot (no conflicts, within business hours)
+4. Choose type: Unit or Home visit
+5. Enter client details (name, phone, email, address if home)
+6. Confirmation screen
+
+### Rules
+- Never show invalid slots
+- Never allow incompatible member selection
+- Appointment created with status `PENDING_APPROVAL`
+- Owner approves/rejects from the panel
+
+---
+
+## UX Principles Applied Throughout
+- Dark-first theme with carefully chosen accent colors
+- 8px spacing grid, consistent border-radius
+- Smooth transitions (120–280ms), no bounce effects
+- Minimal visual noise — one insight at a time
+- System prevents errors rather than explaining them
+- Drawers for detail views instead of page navigation
 
