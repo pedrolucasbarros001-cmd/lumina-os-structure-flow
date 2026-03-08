@@ -224,7 +224,7 @@ export default function Agenda() {
       setPrefillTime(timeStr);
       setPrefillTeamMemberId(columns[colIdx].id === '__self' ? '' : columns[colIdx].id);
       setNewOpen(true);
-    }, 500);
+    }, 300);
   }, [columns, dateStr, dragAppt]);
 
   const handleGridPointerMove = useCallback((e: React.PointerEvent) => {
