@@ -348,6 +348,27 @@ export default function Unit() {
             </div>
             <Switch checked={form.accepts_home_visits} onCheckedChange={v => setForm(f => ({ ...f, accepts_home_visits: v }))} />
           </div>
+          {form.accepts_home_visits && (
+            <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="space-y-1.5">
+                <Label>Raio de Cobertura (km)</Label>
+                <Input type="number" placeholder="10" value={mobility.coverage_radius_km} onChange={e => setMobility(m => ({ ...m, coverage_radius_km: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Distância máxima que se desloca</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Taxa Base (€)</Label>
+                  <Input type="number" placeholder="5.00" value={mobility.base_fee} onChange={e => setMobility(m => ({ ...m, base_fee: e.target.value }))} />
+                  <p className="text-xs text-muted-foreground">Taxa fixa de saída</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Preço por Km (€)</Label>
+                  <Input type="number" placeholder="0.50" value={mobility.price_per_km} onChange={e => setMobility(m => ({ ...m, price_per_km: e.target.value }))} />
+                  <p className="text-xs text-muted-foreground">Custo por quilómetro</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

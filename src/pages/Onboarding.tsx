@@ -323,6 +323,26 @@ export default function Onboarding() {
                             </button>
                         </div>
 
+                        {(logisticsType === 'home' || logisticsType === 'hybrid') && (
+                            <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <p className="text-sm font-semibold">Configuração de Deslocação</p>
+                                <div className="space-y-1.5">
+                                    <Label>Raio de Cobertura (km)</Label>
+                                    <Input type="number" placeholder="10" value={mobilityForm.coverage_radius_km} onChange={e => setMobilityForm(m => ({ ...m, coverage_radius_km: e.target.value }))} className="h-11" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label>Taxa Base (€)</Label>
+                                        <Input type="number" placeholder="5.00" value={mobilityForm.base_fee} onChange={e => setMobilityForm(m => ({ ...m, base_fee: e.target.value }))} className="h-11" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label>Preço / Km (€)</Label>
+                                        <Input type="number" placeholder="0.50" value={mobilityForm.price_per_km} onChange={e => setMobilityForm(m => ({ ...m, price_per_km: e.target.value }))} className="h-11" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <Button className="w-full h-12" disabled={!logisticsType || loading} onClick={handleFinishOwner}>
                             {loading ? 'A preparar a sua conta...' : 'Finalizar Setup'} <CheckCircle2 className="w-4 h-4 ml-2" />
                         </Button>
