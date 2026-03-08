@@ -49,7 +49,7 @@ function loadGoogleMapsScript(): Promise<void> {
 
 export default function AddressAutocomplete({ onSelect, placeholder = 'Insira a morada', defaultValue = '' }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const autocompleteRef = useRef<any>(null);
   const [value, setValue] = useState(defaultValue);
   const [loaded, setLoaded] = useState(false);
 
