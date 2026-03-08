@@ -44,20 +44,22 @@ export default function PanelLayout() {
         </div>
       </div>
 
-      {/* Central FAB Button */}
-      <button
-        onClick={() => setFabOpen(true)}
-        className={cn(
-          'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
-          'w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40',
-          'flex items-center justify-center',
-          'hover:scale-110 active:scale-95 transition-all duration-200',
-          'ring-4 ring-primary/20',
-        )}
-        aria-label="Ações rápidas"
-      >
-        <Plus className={cn('w-7 h-7 text-primary-foreground transition-transform duration-300', fabOpen && 'rotate-45')} />
-      </button>
+      {/* Central FAB Button — only on actionable pages */}
+      {['/dashboard', '/agenda', '/clients'].includes(location.pathname) && (
+        <button
+          onClick={() => setFabOpen(true)}
+          className={cn(
+            'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
+            'w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40',
+            'flex items-center justify-center',
+            'hover:scale-110 active:scale-95 transition-all duration-200',
+            'ring-4 ring-primary/20',
+          )}
+          aria-label="Ações rápidas"
+        >
+          <Plus className={cn('w-7 h-7 text-primary-foreground transition-transform duration-300', fabOpen && 'rotate-45')} />
+        </button>
+      )}
 
       <QuickActionSheet open={fabOpen} onClose={() => setFabOpen(false)} />
     </SidebarProvider>

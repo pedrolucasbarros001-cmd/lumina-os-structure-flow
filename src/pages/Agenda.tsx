@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { format, addDays, subDays, parseISO, startOfWeek, isSameDay, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu } from 'lucide-react';
 import { useAppointments, Appointment, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const HOUR_HEIGHT = 80;
 const START_HOUR = 0;
@@ -341,12 +342,15 @@ export default function Agenda() {
         )}
 
         <div className="flex items-center justify-between">
-          <button className="flex items-center gap-1.5 group" onClick={goToday}>
-            <h2 className="text-lg font-bold capitalize">
-              {format(selected, "EEEE, d 'de' MMMM", { locale: pt })}
-            </h2>
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="shrink-0 -ml-1" />
+            <button className="flex items-center gap-1.5 group" onClick={goToday}>
+              <h2 className="text-lg font-bold capitalize">
+                {format(selected, "EEEE, d 'de' MMMM", { locale: pt })}
+              </h2>
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </div>
           <div className="flex items-center gap-1">
             <button onClick={goPrev} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
               <ChevronLeft className="w-4 h-4" />
