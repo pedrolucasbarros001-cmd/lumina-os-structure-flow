@@ -407,6 +407,7 @@ export type Database = {
         Row: {
           accepts_home_visits: boolean
           address: string | null
+          bio: string | null
           business_hours: Json
           business_type: string | null
           cover_url: string | null
@@ -427,6 +428,7 @@ export type Database = {
         Insert: {
           accepts_home_visits?: boolean
           address?: string | null
+          bio?: string | null
           business_hours?: Json
           business_type?: string | null
           cover_url?: string | null
@@ -447,6 +449,7 @@ export type Database = {
         Update: {
           accepts_home_visits?: boolean
           address?: string | null
+          bio?: string | null
           business_hours?: Json
           business_type?: string | null
           cover_url?: string | null
