@@ -54,7 +54,7 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="glass-surface border-r border-border/30">
       <SidebarContent>
         <div className="px-4 py-5">
           {!collapsed && (
