@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building2, Phone, MapPin, Clock, Save, Globe, Link, Copy, CheckCheck, ExternalLink, QrCode, Eye, EyeOff } from 'lucide-react';
+import { Building2, Phone, MapPin, Clock, Save, Globe, Link, Copy, CheckCheck, ExternalLink, QrCode, Eye, EyeOff, Star, FileText } from 'lucide-react';
 import { useUnit } from '@/hooks/useUnit';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
