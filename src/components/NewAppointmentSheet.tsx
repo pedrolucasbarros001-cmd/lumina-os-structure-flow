@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CalendarPlus, User, Clock, MapPin, StickyNote } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -16,26 +16,39 @@ interface NewAppointmentSheetProps {
     open: boolean;
     onClose: () => void;
     prefillDate?: string;
+    prefillTime?: string;
+    prefillTeamMemberId?: string;
 }
 
-export default function NewAppointmentSheet({ open, onClose, prefillDate }: NewAppointmentSheetProps) {
+export default function NewAppointmentSheet({ open, onClose, prefillDate, prefillTime, prefillTeamMemberId }: NewAppointmentSheetProps) {
     const { data: services = [] } = useServices();
     const { data: clients = [] } = useClients();
     const { data: teamMembers = [] } = useTeamMembers();
     const createAppointment = useCreateAppointment();
     const { toast } = useToast();
 
+    const defaultDatetime = prefillTime || (prefillDate ? `${prefillDate}T10:00` : '');
+
     const [form, setForm] = useState({
         client_name: '',
         client_id: '',
         client_phone: '',
         service_id: '',
-        team_member_id: '',
-        datetime: prefillDate ? `${prefillDate}T10:00` : '',
+        team_member_id: prefillTeamMemberId || '',
+        datetime: defaultDatetime,
         type: 'unit' as 'unit' | 'home',
         address: '',
         notes: '',
     });
+
+    // Update form when prefill props change
+    useEffect(() => {
+        setForm(f => ({
+            ...f,
+            datetime: prefillTime || (prefillDate ? `${prefillDate}T10:00` : f.datetime),
+            team_member_id: prefillTeamMemberId || f.team_member_id,
+        }));
+    }, [prefillTime, prefillTeamMemberId, prefillDate]);
 
     const selectedService = services.find(s => s.id === form.service_id);
 
