@@ -21,20 +21,23 @@ export default function PanelLayout() {
   const [fabOpen, setFabOpen] = useState(false);
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] ?? 'LUMINA OS';
+  const isAgenda = location.pathname === '/agenda';
 
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          <header className="h-14 flex items-center border-b border-border/50 px-4 gap-3 sticky top-0 z-30 bg-background/80 backdrop-blur-md">
-            <SidebarTrigger className="shrink-0" />
-            <div className="flex-1 min-w-0">
-              <h1 className="text-base font-semibold truncate">{title}</h1>
-            </div>
-          </header>
+          {!isAgenda && (
+            <header className="h-14 flex items-center border-b border-border/50 px-4 gap-3 sticky top-0 z-30 bg-background/80 backdrop-blur-md">
+              <SidebarTrigger className="shrink-0" />
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-semibold truncate">{title}</h1>
+              </div>
+            </header>
+          )}
 
-          <main className="flex-1 overflow-auto pb-24">
+          <main className={cn("flex-1 overflow-auto", !isAgenda && "pb-24")}>
             <Outlet />
           </main>
         </div>
