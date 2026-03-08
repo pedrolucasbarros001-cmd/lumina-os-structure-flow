@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import ProgressiveSetup from "./pages/ProgressiveSetup";
 import PublicBooking from "./pages/PublicBooking";
+import Vendas from "./pages/Vendas";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="clients" element={<Clients />} />
               <Route path="team" element={<Team />} />
               <Route path="catalogo" element={<Catalogo />} />
+              <Route path="vendas" element={<Vendas />} />
               <Route path="unit" element={<Unit />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>

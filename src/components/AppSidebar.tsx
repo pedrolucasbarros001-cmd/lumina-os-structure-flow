@@ -4,6 +4,7 @@ import {
   Users,
   UserCog,
   ShoppingBag,
+  Receipt,
   Building2,
   Settings,
   LogOut,
@@ -33,8 +34,9 @@ const NAV_ITEMS = [
   { key: 'agenda', label: 'Agenda', path: '/agenda', icon: CalendarDays },
   { key: 'clients', label: 'Clientes', path: '/clients', icon: Users },
   { key: 'catalogo', label: 'Catálogo', path: '/catalogo', icon: ShoppingBag },
+  { key: 'vendas', label: 'Vendas', path: '/vendas', icon: Receipt },
   { key: 'team', label: 'Equipa', path: '/team', icon: UserCog },
-  { key: 'unit', label: 'A Minha Unidade', path: '/unit', icon: Building2 },
+  { key: 'unit', label: 'A Minha Empresa', path: '/unit', icon: Building2 },
   { key: 'settings', label: 'Configurações', path: '/settings', icon: Settings },
 ];
 
