@@ -39,6 +39,7 @@ export default function Onboarding() {
     const [teamSize, setTeamSize] = useState<string>(''); // Vazio, '2-5', '6-10', etc
 
     const [logisticsType, setLogisticsType] = useState<'unit' | 'home' | 'hybrid' | null>(null);
+    const [mobilityForm, setMobilityForm] = useState({ base_fee: '5', price_per_km: '0.50', coverage_radius_km: '10' });
 
     // Create Unit and finish flow
     const handleFinishOwner = async () => {
@@ -53,7 +54,8 @@ export default function Onboarding() {
                     name: businessName,
                     business_type: businessType,
                     logistics_type: logisticsType,
-                    accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid'
+                    accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid',
+                    coverage_radius_km: (logisticsType === 'home' || logisticsType === 'hybrid') ? parseFloat(mobilityForm.coverage_radius_km) || 0 : 0,
                 })
                 .select()
                 .single();
@@ -81,6 +83,15 @@ export default function Onboarding() {
                 .eq('id', user.id);
 
             if (profileError) throw profileError;
+
+            // 4. Create mobility settings if home/hybrid
+            if (logisticsType === 'home' || logisticsType === 'hybrid') {
+                await supabase.from('mobility_settings').insert({
+                    unit_id: unit.id,
+                    base_fee: parseFloat(mobilityForm.base_fee) || 0,
+                    price_per_km: parseFloat(mobilityForm.price_per_km) || 0,
+                });
+            }
 
             // Invalidate queries & redirect
             await queryClient.invalidateQueries();
@@ -311,6 +322,26 @@ export default function Onboarding() {
                                 <p className="text-xs text-muted-foreground pl-11">Oferece serviços nas duas modalidades.</p>
                             </button>
                         </div>
+
+                        {(logisticsType === 'home' || logisticsType === 'hybrid') && (
+                            <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <p className="text-sm font-semibold">Configuração de Deslocação</p>
+                                <div className="space-y-1.5">
+                                    <Label>Raio de Cobertura (km)</Label>
+                                    <Input type="number" placeholder="10" value={mobilityForm.coverage_radius_km} onChange={e => setMobilityForm(m => ({ ...m, coverage_radius_km: e.target.value }))} className="h-11" />
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label>Taxa Base (€)</Label>
+                                        <Input type="number" placeholder="5.00" value={mobilityForm.base_fee} onChange={e => setMobilityForm(m => ({ ...m, base_fee: e.target.value }))} className="h-11" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label>Preço / Km (€)</Label>
+                                        <Input type="number" placeholder="0.50" value={mobilityForm.price_per_km} onChange={e => setMobilityForm(m => ({ ...m, price_per_km: e.target.value }))} className="h-11" />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <Button className="w-full h-12" disabled={!logisticsType || loading} onClick={handleFinishOwner}>
                             {loading ? 'A preparar a sua conta...' : 'Finalizar Setup'} <CheckCircle2 className="w-4 h-4 ml-2" />

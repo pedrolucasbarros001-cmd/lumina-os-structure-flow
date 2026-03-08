@@ -102,6 +102,7 @@ export default function Unit() {
     name: '', phone: '', address: '', bio: '',
     accepts_home_visits: false, is_published: false, slug: '',
   });
+  const [mobility, setMobility] = useState({ base_fee: '0', price_per_km: '0', coverage_radius_km: '10' });
   const [businessHours, setBusinessHours] = useState<BusinessHours>(defaultHours());
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -125,6 +126,21 @@ export default function Unit() {
       }
       setCoverPreview(unit.cover_url || null);
       setLogoPreview(unit.logo_url || null);
+      setMobility({
+        coverage_radius_km: String(unit.coverage_radius_km || 10),
+        base_fee: '0',
+        price_per_km: '0',
+      });
+      // Load mobility settings
+      supabase.from('mobility_settings').select('*').eq('unit_id', unit.id).maybeSingle().then(({ data }) => {
+        if (data) {
+          setMobility({
+            base_fee: String(data.base_fee || 0),
+            price_per_km: String(data.price_per_km || 0),
+            coverage_radius_km: String(unit.coverage_radius_km || 10),
+          });
+        }
+      });
     }
   }, [unit]);
 
@@ -172,9 +188,28 @@ export default function Unit() {
     if (!unit && !user) return;
     setSaving(true);
     try {
-      const payload = { ...form, business_hours: businessHours, updated_at: new Date().toISOString() };
+      const payload = {
+        ...form,
+        business_hours: businessHours,
+        coverage_radius_km: parseFloat(mobility.coverage_radius_km) || 0,
+        updated_at: new Date().toISOString(),
+      };
       if (unit) {
         await supabase.from('units').update(payload).eq('id', unit.id);
+        // Save mobility settings
+        if (form.accepts_home_visits) {
+          const mobilityPayload = {
+            unit_id: unit.id,
+            base_fee: parseFloat(mobility.base_fee) || 0,
+            price_per_km: parseFloat(mobility.price_per_km) || 0,
+          };
+          const { data: existing } = await supabase.from('mobility_settings').select('id').eq('unit_id', unit.id).maybeSingle();
+          if (existing) {
+            await supabase.from('mobility_settings').update(mobilityPayload).eq('unit_id', unit.id);
+          } else {
+            await supabase.from('mobility_settings').insert(mobilityPayload);
+          }
+        }
       } else {
         await supabase.from('units').insert({ ...payload, owner_id: user!.id });
       }
@@ -313,6 +348,27 @@ export default function Unit() {
             </div>
             <Switch checked={form.accepts_home_visits} onCheckedChange={v => setForm(f => ({ ...f, accepts_home_visits: v }))} />
           </div>
+          {form.accepts_home_visits && (
+            <div className="p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="space-y-1.5">
+                <Label>Raio de Cobertura (km)</Label>
+                <Input type="number" placeholder="10" value={mobility.coverage_radius_km} onChange={e => setMobility(m => ({ ...m, coverage_radius_km: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Distância máxima que se desloca</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Taxa Base (€)</Label>
+                  <Input type="number" placeholder="5.00" value={mobility.base_fee} onChange={e => setMobility(m => ({ ...m, base_fee: e.target.value }))} />
+                  <p className="text-xs text-muted-foreground">Taxa fixa de saída</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Preço por Km (€)</Label>
+                  <Input type="number" placeholder="0.50" value={mobility.price_per_km} onChange={e => setMobility(m => ({ ...m, price_per_km: e.target.value }))} />
+                  <p className="text-xs text-muted-foreground">Custo por quilómetro</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
