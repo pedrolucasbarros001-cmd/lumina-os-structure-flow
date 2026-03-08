@@ -39,6 +39,7 @@ export default function Onboarding() {
     const [teamSize, setTeamSize] = useState<string>(''); // Vazio, '2-5', '6-10', etc
 
     const [logisticsType, setLogisticsType] = useState<'unit' | 'home' | 'hybrid' | null>(null);
+    const [mobilityForm, setMobilityForm] = useState({ base_fee: '5', price_per_km: '0.50', coverage_radius_km: '10' });
 
     // Create Unit and finish flow
     const handleFinishOwner = async () => {
