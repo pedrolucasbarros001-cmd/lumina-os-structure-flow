@@ -52,7 +52,7 @@ export default function PanelLayout() {
             'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
             'w-14 h-14 rounded-full bg-primary shadow-2xl shadow-primary/40',
             'flex items-center justify-center',
-            'hover:scale-110 active:scale-95 transition-all duration-200',
+            'hover:scale-110 transition-all duration-200 haptic-press',
             'ring-4 ring-primary/20',
           )}
           aria-label="Ações rápidas"

@@ -75,7 +75,7 @@ export function AppSidebar() {
                     <NavLink
                       to={item.path}
                       end
-                      className="hover:bg-sidebar-accent/50 transition-smooth"
+                      className="hover:bg-sidebar-accent/50 transition-smooth haptic-press rounded-xl"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
                       <item.icon className="mr-2 h-4 w-4 shrink-0" />
