@@ -206,6 +206,7 @@ export default function Agenda() {
   // ─── Long Press on empty grid ───
   const handleGridPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (dragAppt) return;
+    e.preventDefault();
     const rect = gridRef.current?.getBoundingClientRect();
     if (!rect) return;
     const relX = e.clientX - rect.left;
