@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { X, Clock, MapPin, User, Calendar, Repeat, Mail, MoreHorizontal, CreditCard, Banknote, Check, ChevronLeft, Delete, Gift, DollarSign, SplitSquareHorizontal, FileText, Ban, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Clock, MapPin, User, Calendar, Repeat, Mail, MoreHorizontal, CreditCard, Banknote, Check, ChevronLeft, Delete, Gift, DollarSign, FileText, Ban, AlertTriangle, Navigation, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
@@ -10,6 +11,7 @@ import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import SlideToAction from '@/components/SlideToAction';
 
 interface AppointmentDetailSheetProps {
   appointment: Appointment;
@@ -49,12 +51,21 @@ const PAYMENT_METHODS = [
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending_approval: { label: 'Pendente', color: 'bg-amber-100 text-amber-700' },
   confirmed: { label: 'Confirmado', color: 'bg-sky-100 text-sky-700' },
+  en_route: { label: 'A caminho', color: 'bg-amber-100 text-amber-700' },
+  arrived: { label: 'No local', color: 'bg-emerald-100 text-emerald-700' },
   completed: { label: 'Concluído', color: 'bg-emerald-100 text-emerald-700' },
   cancelled: { label: 'Cancelado', color: 'bg-red-100 text-red-700' },
   no_show: { label: 'Não compareceu', color: 'bg-muted text-muted-foreground' },
 };
 
-type View = 'detail' | 'actions' | 'cart' | 'checkout' | 'note' | 'done';
+const TIP_OPTIONS = [
+  { label: 'Sem gorjeta', value: 0 },
+  { label: '10%', value: 0.1 },
+  { label: '18%', value: 0.18 },
+  { label: '25%', value: 0.25 },
+];
+
+type View = 'detail' | 'actions' | 'cart' | 'tip' | 'checkout' | 'processing' | 'note' | 'done';
 
 export default function AppointmentDetailSheet({ appointment: appt, onClose }: AppointmentDetailSheetProps) {
   const { data: services = [] } = useServices();
@@ -67,46 +78,91 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
   const [paymentMethod, setPaymentMethod] = useState('');
   const [cashPaid, setCashPaid] = useState('');
   const [noteText, setNoteText] = useState(appt.notes || '');
+  const [tipPercent, setTipPercent] = useState<number>(0);
+  const [customTip, setCustomTip] = useState('');
+  const [statusLoading, setStatusLoading] = useState(false);
 
   const apptServices = services.filter(s => appt.service_ids?.includes(s.id));
   const total = appt.value || apptServices.reduce((acc, s) => acc + s.price, 0);
+  const tipAmount = customTip ? parseFloat(customTip) || 0 : total * tipPercent;
+  const grandTotal = total + tipAmount + (appt.displacement_fee || 0);
   const cashPaidNum = parseFloat(cashPaid || '0');
-  const change = cashPaid && cashPaidNum >= total ? cashPaidNum - total : null;
+  const change = cashPaid && cashPaidNum >= grandTotal ? cashPaidNum - grandTotal : null;
   const datetime = parseISO(appt.datetime);
   const status = appt.status as string;
   const statusInfo = STATUS_LABELS[status];
   const teamMember = teamMembers.find(m => m.id === appt.team_member_id);
+  const isHome = appt.type === 'home';
 
   const getInitials = (name: string) => name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-  const suggestions = total > 0 ? [
-    Math.ceil(total / 5) * 5,
-    Math.ceil(total / 10) * 10,
-    Math.ceil(total / 20) * 20,
-  ].filter((v, i, a) => a.indexOf(v) === i && v > total) : [];
+  const suggestions = grandTotal > 0 ? [
+    Math.ceil(grandTotal / 5) * 5,
+    Math.ceil(grandTotal / 10) * 10,
+    Math.ceil(grandTotal / 20) * 20,
+  ].filter((v, i, a) => a.indexOf(v) === i && v > grandTotal) : [];
 
-  const handleStatus = async (s: Appointment['status']) => {
-    await updateStatus.mutateAsync({ id: appt.id, status: s });
-    toast({ title: 'Estado atualizado!' });
-    if (s === 'cancelled' || s === 'no_show') onClose();
+  // Header color based on status for home appointments
+  const headerColor = isHome && status === 'en_route'
+    ? 'bg-amber-500'
+    : isHome && status === 'arrived'
+    ? 'bg-emerald-500'
+    : 'bg-sky-500';
+
+  const handleStatus = async (s: string) => {
+    setStatusLoading(true);
+    try {
+      await updateStatus.mutateAsync({ id: appt.id, status: s as Appointment['status'] });
+      toast({ title: 'Estado atualizado!' });
+      if (s === 'cancelled' || s === 'no_show') onClose();
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleStartRoute = async () => {
+    await handleStatus('en_route');
+    // Open Google Maps directions
+    if (appt.address) {
+      const encoded = encodeURIComponent(appt.address);
+      window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, '_blank');
+    }
+  };
+
+  const handleCheckin = async () => {
+    await handleStatus('arrived');
   };
 
   const handleConfirmPayment = async () => {
     try {
+      setView('processing');
       await updateAppointment.mutateAsync({
         id: appt.id,
         status: 'completed',
         payment_method: paymentMethod,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
-        amount_received: paymentMethod === 'cash' ? cashPaidNum : total,
+        amount_received: paymentMethod === 'cash' ? cashPaidNum : grandTotal,
       });
-      setView('done');
-      setTimeout(() => onClose(), 2000);
     } catch (e: any) {
+      setView('checkout');
       toast({ title: 'Erro ao confirmar pagamento', description: e?.message, variant: 'destructive' });
     }
   };
+
+  // Auto-transition from processing to done
+  useEffect(() => {
+    if (view !== 'processing') return;
+    const timer = setTimeout(() => setView('done'), 1500);
+    return () => clearTimeout(timer);
+  }, [view]);
+
+  // Auto-close after done
+  useEffect(() => {
+    if (view !== 'done') return;
+    const timer = setTimeout(() => onClose(), 2500);
+    return () => clearTimeout(timer);
+  }, [view, onClose]);
 
   const handleSaveNote = async () => {
     try {
@@ -122,24 +178,37 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
     <Sheet open onOpenChange={o => !o && onClose()}>
       <SheetContent side="bottom" className="h-[95vh] rounded-t-3xl p-0 flex flex-col">
 
-        {/* ─── Blue header bar ─── */}
-        <div className="bg-sky-500 text-white px-4 pt-5 pb-4 flex items-center justify-between rounded-t-3xl">
+        {/* ─── Header bar ─── */}
+        <div className={cn('text-white px-4 pt-5 pb-4 flex items-center justify-between rounded-t-3xl transition-colors', headerColor)}>
           <span className="text-sm font-semibold capitalize">
             {format(datetime, "EEE, d 'de' MMM", { locale: pt })}
+            {isHome && status === 'en_route' && ' · A caminho'}
+            {isHome && status === 'arrived' && ' · No local'}
           </span>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-white/20 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </div>
 
+        {/* ─── PROCESSING ─── */}
+        {view === 'processing' && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-4">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-primary-foreground/20 flex items-center justify-center animate-pulse">
+              <Banknote className="w-10 h-10 text-primary-foreground" />
+            </div>
+            <p className="text-lg font-bold">Processando pagamento</p>
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
         {/* ─── DONE ─── */}
         {view === 'done' && (
           <div className="flex flex-col items-center justify-center flex-1 gap-4">
-            <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center animate-in zoom-in-50 duration-300">
-              <Check className="w-10 h-10 text-emerald-500" />
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary via-primary to-accent flex items-center justify-center animate-in zoom-in-50 duration-300">
+              <Check className="w-12 h-12 text-primary-foreground" />
             </div>
-            <p className="text-lg font-bold">Pagamento Confirmado!</p>
-            <p className="text-muted-foreground text-sm">€{total.toFixed(2)} registado</p>
+            <p className="text-xl font-bold">Venda concluída</p>
+            <p className="text-muted-foreground text-sm">€{grandTotal.toFixed(2)} registado</p>
           </div>
         )}
 
@@ -241,14 +310,82 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                 </div>
               )}
 
+              {/* Displacement fee */}
+              {appt.displacement_fee > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-card border border-border/50">
+                  <div>
+                    <p className="font-medium text-sm">Taxa de deslocação</p>
+                    <p className="text-xs text-muted-foreground">{appt.distance_km} km</p>
+                  </div>
+                  <span className="text-sm font-semibold">€{appt.displacement_fee.toFixed(2)}</span>
+                </div>
+              )}
+
               {/* Total */}
               <div className="flex items-center justify-between pt-2 border-t border-border/50">
                 <span className="font-bold">Total</span>
-                <span className="text-lg font-bold">€{total.toFixed(2)}</span>
+                <span className="text-lg font-bold">€{(total + (appt.displacement_fee || 0)).toFixed(2)}</span>
               </div>
             </div>
 
             <div className="border-t border-border/50 px-4 py-4 bg-background">
+              <Button className="w-full h-14 text-base font-bold rounded-2xl" onClick={() => setView('tip')}>
+                Continuar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TIP SELECTION ─── */}
+        {view === 'tip' && (
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+              <div className="flex items-center gap-2 mb-1">
+                <button onClick={() => setView('cart')} className="text-muted-foreground hover:text-foreground">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Gorjeta</p>
+              </div>
+
+              <p className="text-center text-muted-foreground text-sm">Deseja adicionar uma gorjeta?</p>
+
+              <div className="grid grid-cols-2 gap-2">
+                {TIP_OPTIONS.map(opt => (
+                  <button
+                    key={opt.label}
+                    onClick={() => { setTipPercent(opt.value); setCustomTip(''); }}
+                    className={cn(
+                      'p-4 rounded-2xl border-2 text-center transition-all',
+                      tipPercent === opt.value && !customTip
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border/50 bg-card hover:border-primary/30'
+                    )}
+                  >
+                    <p className="text-sm font-bold">{opt.label}</p>
+                    {opt.value > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">€{(total * opt.value).toFixed(2)}</p>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground">Gorjeta personalizada</label>
+                <Input
+                  type="number"
+                  placeholder="€0.00"
+                  value={customTip}
+                  onChange={e => { setCustomTip(e.target.value); setTipPercent(0); }}
+                  className="rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-border/50 px-4 py-4 bg-background space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">A pagar</span>
+                <span className="text-lg font-bold">€{grandTotal.toFixed(2)}</span>
+              </div>
               <Button className="w-full h-14 text-base font-bold rounded-2xl" onClick={() => setView('checkout')}>
                 Continuar para o pagamento
               </Button>
@@ -260,7 +397,7 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
         {view === 'checkout' && (
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
             <div className="flex items-center gap-2 mb-1">
-              <button onClick={() => setView('cart')} className="text-muted-foreground hover:text-foreground">
+              <button onClick={() => setView('tip')} className="text-muted-foreground hover:text-foreground">
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <p className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Forma de Pagamento</p>
@@ -307,11 +444,11 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
 
             <Button
               className="w-full h-14 text-base font-bold rounded-2xl"
-              disabled={!paymentMethod || (paymentMethod === 'cash' && cashPaidNum < total) || updateAppointment.isPending}
+              disabled={!paymentMethod || (paymentMethod === 'cash' && cashPaidNum < grandTotal) || updateAppointment.isPending}
               onClick={handleConfirmPayment}
             >
               <Check className="w-5 h-5 mr-2" />
-              Confirmar €{total.toFixed(2)}
+              Confirmar €{grandTotal.toFixed(2)}
             </Button>
           </div>
         )}
@@ -391,10 +528,32 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                   </div>
                 )}
 
+                {/* Address + mini map for home appointments */}
                 {appt.address && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                    <MapPin className="w-4 h-4" />
-                    <span>{appt.address}</span>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="w-4 h-4" />
+                      <span>{appt.address}</span>
+                    </div>
+                    {import.meta.env.VITE_GOOGLE_MAPS_KEY && (
+                      <div className="rounded-xl overflow-hidden border border-border/50">
+                        <img
+                          src={`https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(appt.address)}&zoom=15&size=600x150&markers=color:red|${encodeURIComponent(appt.address)}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
+                          alt="Mapa"
+                          className="w-full h-[120px] object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {appt.displacement_fee > 0 && (
+                  <div className="flex items-center justify-between mt-2 text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <Navigation className="w-3 h-3" /> Deslocação ({appt.distance_km} km)
+                    </span>
+                    <span className="font-medium">€{appt.displacement_fee.toFixed(2)}</span>
                   </div>
                 )}
 
@@ -408,7 +567,7 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
             <div className="border-t border-border/50 px-4 py-4 bg-background space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total</span>
-                <span className="text-lg font-bold">€{total.toFixed(2)}</span>
+                <span className="text-lg font-bold">€{(total + (appt.displacement_fee || 0)).toFixed(2)}</span>
               </div>
 
               {status === 'completed' ? (
@@ -424,26 +583,59 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                   <span className="px-4 py-2 bg-muted text-muted-foreground rounded-full text-sm font-bold">Não compareceu</span>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   {status === 'pending_approval' && (
-                    <>
+                    <div className="flex gap-2">
                       <Button variant="outline" className="flex-1 border-destructive/50 text-destructive" onClick={() => handleStatus('cancelled')}>
                         Rejeitar
                       </Button>
                       <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleStatus('confirmed')}>
                         Confirmar
                       </Button>
-                    </>
+                    </div>
                   )}
-                  {(status === 'confirmed' || status === 'arrived') && (
-                    <>
+
+                  {/* Home delivery flow */}
+                  {isHome && status === 'confirmed' && (
+                    <SlideToAction
+                      label="Iniciar Trajeto"
+                      color="yellow"
+                      onConfirm={handleStartRoute}
+                      loading={statusLoading}
+                    />
+                  )}
+
+                  {isHome && status === 'en_route' && (
+                    <SlideToAction
+                      label="Check-in"
+                      color="green"
+                      onConfirm={handleCheckin}
+                      loading={statusLoading}
+                    />
+                  )}
+
+                  {/* Unit appointments or arrived home appointments → checkout */}
+                  {((!isHome && status === 'confirmed') || status === 'arrived') && (
+                    <div className="flex gap-2">
                       <Button variant="outline" className="flex-1" onClick={() => setView('actions')}>
                         <MoreHorizontal className="w-4 h-4 mr-1" /> Ações
                       </Button>
                       <Button className="flex-1" onClick={() => setView('cart')}>
                         <CreditCard className="w-4 h-4 mr-2" /> Checkout
                       </Button>
-                    </>
+                    </div>
+                  )}
+
+                  {/* en_route for unit doesn't exist, but just in case */}
+                  {!isHome && status === 'en_route' && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => setView('actions')}>
+                        <MoreHorizontal className="w-4 h-4 mr-1" /> Ações
+                      </Button>
+                      <Button className="flex-1" onClick={() => setView('cart')}>
+                        <CreditCard className="w-4 h-4 mr-2" /> Checkout
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}

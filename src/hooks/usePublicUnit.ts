@@ -50,10 +50,25 @@ export function usePublicUnit(slug: string | undefined) {
     enabled: !!unitId,
   });
 
+  const mobilityQuery = useQuery({
+    queryKey: ['public-mobility', unitId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('mobility_settings')
+        .select('*')
+        .eq('unit_id', unitId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!unitId,
+  });
+
   return {
     unit: unitQuery.data,
     services: servicesQuery.data ?? [],
     team: teamQuery.data ?? [],
+    mobility: mobilityQuery.data,
     isLoading: unitQuery.isLoading,
   };
 }

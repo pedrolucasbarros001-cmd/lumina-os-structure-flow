@@ -8,12 +8,24 @@ import { usePublicUnit } from '@/hooks/usePublicUnit';
 import { supabase } from '@/integrations/supabase/client';
 import { addDays, format, isSameDay } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 type ServiceItem = { id: string; name: string; duration: number; price: number; is_home_service: boolean };
 
+// Haversine distance in km
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function PublicBooking() {
   const { slug } = useParams<{ slug: string }>();
-  const { unit, services, team, isLoading } = usePublicUnit(slug);
+  const { unit, services, team, mobility, isLoading } = usePublicUnit(slug);
 
   const [step, setStep] = useState(1);
   const [logistics, setLogistics] = useState<'unit' | 'home' | null>(null);
@@ -24,23 +36,42 @@ export default function PublicBooking() {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
   const [clientPhone, setClientPhone] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
+  const [clientLat, setClientLat] = useState<number>(0);
+  const [clientLng, setClientLng] = useState<number>(0);
+  const [distanceKm, setDistanceKm] = useState<number>(0);
+  const [travelFee, setTravelFee] = useState<number>(0);
+  const [addressError, setAddressError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const isHome = logistics === 'home';
+  const totalSteps = isHome ? 6 : 5;
 
   // Auto-skip step 1 if unit doesn't accept home visits
   const effectiveStep = (!unit?.accepts_home_visits && step === 1) ? 2 : step;
 
+  // Map step to logical step for home vs unit flows
+  // Unit: 1=Logistics, 2=Services, 3=Pro, 4=DateTime, 5=Confirmation
+  // Home: 1=Logistics, 2=Services, 3=Pro, 4=DateTime, 5=Address, 6=Confirmation
+  const getStepLabel = (s: number) => {
+    if (isHome) {
+      return ['Logística', 'Serviços', 'Profissional', 'Data & Hora', 'Morada', 'Confirmação'][s - 1];
+    }
+    return ['Logística', 'Serviços', 'Profissional', 'Data & Hora', 'Confirmação'][s - 1];
+  };
+
   const subtotal = selectedServices.reduce((s, sv) => s + sv.price, 0);
+  const grandTotal = subtotal + (isHome ? travelFee : 0);
   const totalDuration = selectedServices.reduce((s, sv) => s + sv.duration, 0);
 
-  // Filtered services based on logistics
   const filteredServices = useMemo(() => {
     if (!services) return [];
     if (logistics === 'home') return services.filter(s => s.is_home_service);
     return services;
   }, [services, logistics]);
 
-  // Filtered team based on selected services
   const filteredTeam = useMemo(() => {
     if (!team || selectedServices.length === 0) return team;
     const serviceIds = selectedServices.map(s => s.id);
@@ -50,14 +81,12 @@ export default function PublicBooking() {
     });
   }, [team, selectedServices]);
 
-  // Generate next 14 days
   const days = useMemo(() => {
     const result = [];
     for (let i = 0; i < 14; i++) result.push(addDays(new Date(), i));
     return result;
   }, []);
 
-  // Generate time slots from business hours
   const timeSlots = useMemo(() => {
     if (!unit?.business_hours || !selectedDate) return [];
     const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -84,19 +113,46 @@ export default function PublicBooking() {
     );
   };
 
+  const handleAddressSelect = (result: { address: string; lat: number; lng: number }) => {
+    setClientAddress(result.address);
+    setClientLat(result.lat);
+    setClientLng(result.lng);
+    setAddressError('');
+
+    if (unit?.latitude && unit?.longitude && result.lat !== 0) {
+      const dist = haversineKm(Number(unit.latitude), Number(unit.longitude), result.lat, result.lng);
+      setDistanceKm(Math.round(dist * 10) / 10);
+
+      if (unit.coverage_radius_km && dist > Number(unit.coverage_radius_km)) {
+        setAddressError('Fora da zona de cobertura');
+        setTravelFee(0);
+        return;
+      }
+
+      if (mobility) {
+        const fee = Number(mobility.base_fee) + dist * Number(mobility.price_per_km);
+        setTravelFee(Math.round(fee * 100) / 100);
+      }
+    }
+  };
+
   const canAdvance = () => {
     switch (effectiveStep) {
       case 1: return !!logistics;
       case 2: return selectedServices.length > 0;
       case 3: return !!selectedPro;
       case 4: return !!selectedDate && !!selectedTime;
-      case 5: return clientName.trim().length > 0;
+      case 5:
+        if (isHome) return clientAddress.trim().length > 0 && !addressError;
+        return clientName.trim().length > 0;
+      case 6: return clientName.trim().length > 0;
       default: return false;
     }
   };
 
   const handleNext = () => {
-    if (effectiveStep === 5) return handleSubmit();
+    const confirmStep = isHome ? 6 : 5;
+    if (effectiveStep === confirmStep) return handleSubmit();
     setStep(s => s + 1);
   };
 
@@ -104,8 +160,6 @@ export default function PublicBooking() {
     if (effectiveStep <= 1) return;
     setStep(s => s - 1);
   };
-
-  const [error, setError] = useState('');
 
   const handleSubmit = async () => {
     if (!unit) return;
@@ -120,10 +174,13 @@ export default function PublicBooking() {
         datetime,
         duration: totalDuration,
         value: subtotal,
-        type: logistics === 'home' ? 'home' : 'unit',
+        type: isHome ? 'home' : 'unit',
         client_name: clientName,
         client_email: clientEmail || null,
         client_phone: clientPhone || null,
+        address: isHome ? clientAddress : null,
+        displacement_fee: isHome ? travelFee : 0,
+        distance_km: isHome ? distanceKm : null,
         status: 'pending_approval',
         payment_status: 'unpaid',
       });
@@ -168,7 +225,7 @@ export default function PublicBooking() {
     );
   }
 
-  const stepLabels = ['Logística', 'Serviços', 'Profissional', 'Data & Hora', 'Confirmação'];
+  const isConfirmStep = effectiveStep === (isHome ? 6 : 5);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -204,7 +261,7 @@ export default function PublicBooking() {
             </button>
           )}
           <span className="text-xs text-muted-foreground uppercase tracking-widest">
-            Passo {effectiveStep} de 5 — {stepLabels[effectiveStep - 1]}
+            Passo {effectiveStep} de {totalSteps} — {getStepLabel(effectiveStep)}
           </span>
         </div>
 
@@ -305,7 +362,6 @@ export default function PublicBooking() {
         {/* ── Step 4: Data & Hora ── */}
         {effectiveStep === 4 && (
           <div className="space-y-5">
-            {/* Day ribbon */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
               {days.map((d, i) => {
                 const isSelected = selectedDate && isSameDay(d, selectedDate);
@@ -326,7 +382,6 @@ export default function PublicBooking() {
               })}
             </div>
 
-            {/* Time pills */}
             {selectedDate && (
               <div className="grid grid-cols-4 gap-2">
                 {timeSlots.length === 0 && (
@@ -350,8 +405,51 @@ export default function PublicBooking() {
           </div>
         )}
 
-        {/* ── Step 5: Checkout ── */}
-        {effectiveStep === 5 && (
+        {/* ── Step 5 (Home): Morada ── */}
+        {effectiveStep === 5 && isHome && (
+          <div className="space-y-4">
+            <AddressAutocomplete
+              onSelect={handleAddressSelect}
+              defaultValue={clientAddress}
+              placeholder="Rua, nº, cidade..."
+            />
+
+            {addressError && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
+                {addressError}
+              </div>
+            )}
+
+            {distanceKm > 0 && !addressError && (
+              <div className="frosted-glass p-4 space-y-2 rounded-2xl">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Distância</span>
+                  <span className="font-medium">{distanceKm} km</span>
+                </div>
+                {travelFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Taxa de deslocação</span>
+                    <span className="font-bold">€{travelFee.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Static map preview */}
+            {clientLat !== 0 && clientLng !== 0 && import.meta.env.VITE_GOOGLE_MAPS_KEY && (
+              <div className="rounded-2xl overflow-hidden border border-border/50">
+                <img
+                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${clientLat},${clientLng}&zoom=15&size=600x200&markers=color:red|${clientLat},${clientLng}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
+                  alt="Localização"
+                  className="w-full h-[150px] object-cover"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Confirmation Step ── */}
+        {isConfirmStep && (
           <div className="space-y-5">
             {/* Summary */}
             <div className="frosted-glass p-4 space-y-2">
@@ -362,13 +460,24 @@ export default function PublicBooking() {
                   <span className="font-medium">€{s.price}</span>
                 </div>
               ))}
+              {isHome && travelFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Taxa de deslocação ({distanceKm} km)</span>
+                  <span className="font-medium">€{travelFee.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-border/50 pt-2 flex justify-between font-bold">
                 <span>Total</span>
-                <span>€{subtotal.toFixed(2)}</span>
+                <span>€{grandTotal.toFixed(2)}</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: pt })} às {selectedTime} · {totalDuration} min
               </p>
+              {isHome && clientAddress && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {clientAddress}
+                </p>
+              )}
             </div>
 
             {/* Client fields */}
@@ -402,7 +511,7 @@ export default function PublicBooking() {
         <div className="max-w-lg mx-auto flex items-center justify-between">
           <div>
             <p className="text-xs text-muted-foreground">Subtotal</p>
-            <p className="text-lg font-bold">€ {subtotal.toFixed(2)}</p>
+            <p className="text-lg font-bold">€ {grandTotal.toFixed(2)}</p>
           </div>
           <Button
             onClick={handleNext}
@@ -410,7 +519,7 @@ export default function PublicBooking() {
             className="h-12 px-8 rounded-2xl text-sm font-bold"
           >
             {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {effectiveStep === 5 ? 'Confirmar Agendamento' : 'Próximo'}
+            {isConfirmStep ? 'Confirmar Agendamento' : 'Próximo'}
           </Button>
         </div>
       </div>

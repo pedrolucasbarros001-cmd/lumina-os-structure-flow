@@ -17,6 +17,8 @@ const FILTERS = [
 const STATUS_STYLES: Record<Appointment['status'], string> = {
   pending_approval: 'bg-yellow-500/20 border-yellow-500/40',
   confirmed: 'bg-blue-500/20 border-blue-500/40',
+  en_route: 'bg-amber-500/20 border-amber-500/40',
+  arrived: 'bg-emerald-500/20 border-emerald-500/40',
   completed: 'bg-muted/40 border-border/50',
   cancelled: 'bg-red-500/10 border-red-500/20',
   no_show: 'bg-orange-500/10 border-orange-500/20',
@@ -25,6 +27,8 @@ const STATUS_STYLES: Record<Appointment['status'], string> = {
 const STATUS_DOT: Record<Appointment['status'], string> = {
   pending_approval: 'bg-yellow-400',
   confirmed: 'bg-blue-400',
+  en_route: 'bg-amber-400',
+  arrived: 'bg-emerald-400',
   completed: 'bg-emerald-400',
   cancelled: 'bg-red-400',
   no_show: 'bg-orange-400',
@@ -33,6 +37,8 @@ const STATUS_DOT: Record<Appointment['status'], string> = {
 const STATUS_LABELS: Record<Appointment['status'], string> = {
   pending_approval: 'Pendente',
   confirmed: 'Confirmado',
+  en_route: 'A caminho',
+  arrived: 'No local',
   completed: 'Concluído',
   cancelled: 'Cancelado',
   no_show: 'Faltou',
