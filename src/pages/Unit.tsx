@@ -159,6 +159,30 @@ export default function Unit() {
   return (
     <div className="max-w-xl mx-auto px-4 py-4 space-y-6 pb-28">
 
+      {/* ── GOOGLE MY BUSINESS PREVIEW ── */}
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Pré-visualização</h2>
+        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+          {/* Cover */}
+          <div className="h-28 bg-gradient-to-br from-primary/40 to-accent/40 relative">
+            {unit?.cover_url && <img src={unit.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+            {/* Logo overlay */}
+            <div className="absolute -bottom-6 left-4 w-14 h-14 rounded-2xl border-2 border-background bg-muted flex items-center justify-center overflow-hidden">
+              {unit?.logo_url ? <img src={unit.logo_url} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
+            </div>
+          </div>
+          <div className="pt-8 pb-4 px-4 space-y-1">
+            <h3 className="font-bold text-lg">{form.name || 'Nome do Negócio'}</h3>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              {form.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{form.address}</span>}
+              {form.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{form.phone}</span>}
+              <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400" /> 5.0</span>
+            </div>
+            {form.bio && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{form.bio}</p>}
+          </div>
+        </div>
+      </section>
+
       {/* ── BOOKING LINK (The Magic Public Section) ── */}
       <BookingLinkCard
         slug={form.slug}
