@@ -116,6 +116,7 @@ export default function Unit() {
         name: unit.name || '',
         phone: (unit as any).phone || '',
         address: unit.address || '',
+        bio: (unit as any).bio || '',
         accepts_home_visits: unit.accepts_home_visits || false,
         is_published: unit.is_published || false,
         slug: unit.slug || '',
