@@ -294,8 +294,21 @@ export default function Agenda() {
     isDragging.current = false;
   };
 
+  const updateAppointment = useUpdateAppointment();
+  const { toast } = useToast();
+
   const handleRescheduleConfirm = async (_notify: boolean) => {
-    // In production: update datetime + team_member_id in DB
+    if (!rescheduleTarget) return;
+    try {
+      await updateAppointment.mutateAsync({
+        id: rescheduleTarget.appt.id,
+        datetime: rescheduleTarget.newTime,
+        team_member_id: rescheduleTarget.newTeamMemberId || null,
+      });
+      toast({ title: 'Agendamento remarcado!' });
+    } catch (e: any) {
+      toast({ title: 'Erro ao remarcar', description: e?.message, variant: 'destructive' });
+    }
     setRescheduleTarget(null);
   };
 

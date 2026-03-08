@@ -388,6 +388,13 @@ export default function PublicBooking() {
             </div>
           </div>
         )}
+        {error && (
+          <div className="px-4 -mt-2 mb-2">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── STICKY FOOTER ── */}
