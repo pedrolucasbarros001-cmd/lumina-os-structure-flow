@@ -188,9 +188,28 @@ export default function Unit() {
     if (!unit && !user) return;
     setSaving(true);
     try {
-      const payload = { ...form, business_hours: businessHours, updated_at: new Date().toISOString() };
+      const payload = {
+        ...form,
+        business_hours: businessHours,
+        coverage_radius_km: parseFloat(mobility.coverage_radius_km) || 0,
+        updated_at: new Date().toISOString(),
+      };
       if (unit) {
         await supabase.from('units').update(payload).eq('id', unit.id);
+        // Save mobility settings
+        if (form.accepts_home_visits) {
+          const mobilityPayload = {
+            unit_id: unit.id,
+            base_fee: parseFloat(mobility.base_fee) || 0,
+            price_per_km: parseFloat(mobility.price_per_km) || 0,
+          };
+          const { data: existing } = await supabase.from('mobility_settings').select('id').eq('unit_id', unit.id).maybeSingle();
+          if (existing) {
+            await supabase.from('mobility_settings').update(mobilityPayload).eq('unit_id', unit.id);
+          } else {
+            await supabase.from('mobility_settings').insert(mobilityPayload);
+          }
+        }
       } else {
         await supabase.from('units').insert({ ...payload, owner_id: user!.id });
       }
