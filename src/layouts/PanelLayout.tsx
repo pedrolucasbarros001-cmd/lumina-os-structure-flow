@@ -30,7 +30,7 @@ export default function PanelLayout() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {!isAgenda && (
-            <header className="h-14 flex items-center border-b border-border/50 px-4 gap-3 sticky top-0 z-30 bg-background/80 backdrop-blur-md">
+            <header className="h-14 flex items-center border-b border-border/30 px-4 gap-3 sticky top-0 z-30 glass-surface">
               <SidebarTrigger className="shrink-0" />
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-semibold truncate">{title}</h1>
