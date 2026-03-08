@@ -104,7 +104,7 @@ export default function Unit() {
   const { toast } = useToast();
 
   const [form, setForm] = useState({
-    name: '', phone: '', address: '',
+    name: '', phone: '', address: '', bio: '',
     accepts_home_visits: false, is_published: false, slug: '',
   });
   const [businessHours, setBusinessHours] = useState<BusinessHours>(defaultHours());
