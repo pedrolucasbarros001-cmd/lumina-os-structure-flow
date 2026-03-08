@@ -1,129 +1,53 @@
 
 
-# LUMINA OS — Full Implementation Plan
+# Rebuild Agenda as Fresha-style Vertical Time Grid
 
-## Overview
-LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
+## What We're Building
 
----
+A complete rewrite of `src/pages/Agenda.tsx` and `src/components/AgendaTutorialOverlay.tsx` to match the Fresha reference screenshots exactly:
 
-## Phase 1: Foundation & Database
+### Agenda Layout (Fresha-identical)
+- **Header**: Date with dropdown chevron, filter/notification/avatar icons on right
+- **Team member avatars**: Horizontal row below header, each member gets a column
+- **Vertical time grid**: Hours on the left (00:00 to 23:00), columns per team member, with thin gridlines
+- **Appointment blocks**: Absolutely positioned within their team member column, spanning correct height based on duration (1hr = ~80px). Light blue/orange fill with left border accent. Shows "9:00am - 10:00am", client name bold, service name below
+- **Current time indicator**: Red line spanning full width with red time badge on left edge
+- **Long press on empty slot**: Shows a `+` icon in a light blue highlight zone, opens NewAppointmentSheet pre-filled with that team member and time
+- **Drag & drop**: Hold an appointment block to drag it to another time/column. Shows ghost copy. On drop, opens a confirmation modal with "Atualizar agendamento" title + checkbox "Notificar cliente sobre a remarcação" + Cancel/Salvar buttons
+- **Reschedule banner**: Purple banner at top saying "Remarcar para [date]" with X to cancel
 
-### Database Schema (Supabase)
-- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
-- **services** — name, duration, price, description, image, unit_id
-- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
-- **team_member_services** — links team members to services they perform
-- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
-- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
-- **mobility_settings** — unit_id, base_fee, price_per_km
-- **user_roles** — user_id, role (owner, team_member) with RLS
+### Tutorial Overlay (Fresha-identical)
+Instead of the current card-based overlay, match the Fresha style:
+- The actual agenda grid is visible behind a dark gradient overlay (bottom fade)
+- **Step 1 (Swipe)**: Shows swipe arrows icon on the grid area + hand pointer. Bottom text: "**Percorrer calendário**" / "Deslize para a esquerda e para a direita para alternar datas e colaboradores". White "Próximo" button
+- **Step 2 (Long Press)**: Shows `+` icon in a highlighted blue cell with hand pointer. Bottom text: "**Fazer agendamento**" / "Mantenha pressionado um horário no calendário para agendar". White "Próximo" button
+- **Step 3 (Drag & Drop)**: Shows an appointment being dragged with ghost. Bottom text: "**Arraste e solte**" / "Mantenha pressionado um agendamento para arrastar e soltar". White "Concluído" button
 
-### Auth
-- Email + password authentication via Supabase Auth
-- Profile table linked to auth.users
-- Role-based access: owner vs team member
+## Files to Change
 
-### Multi-language
-- i18n system with PT and EN, language switcher in settings
+### Full Rewrite:
+- **`src/pages/Agenda.tsx`** — Complete rebuild with:
+  - Vertical time grid (24hr, 80px per hour)
+  - Team member columns (fetched from `useTeamMembers`)
+  - Absolutely positioned appointment blocks
+  - Current time red indicator line
+  - Long press handler (500ms timeout) to create appointment
+  - Drag & drop with confirmation modal (checkbox for SMS notification)
+  - Swipe navigation for days
+  - Header matching Fresha style (date + chevron, icons)
 
----
+- **`src/components/AgendaTutorialOverlay.tsx`** — Rebuild to show the actual grid behind a gradient overlay with mock appointment blocks and gesture indicators matching the Fresha screenshots exactly
 
-## Phase 2: Onboarding Flow (5 Steps)
+### Minor Updates:
+- **`src/components/NewAppointmentSheet.tsx`** — Accept `prefillTime` and `prefillTeamMemberId` props for long-press creation
+- **`src/layouts/PanelLayout.tsx`** — Hide the top header bar when on `/agenda` (Fresha has its own header built into the page)
 
-A guided wizard that blocks access to the panel until complete:
+## Technical Approach
 
-1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
-2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
-3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
-4. **Mobility** — if home visits enabled: base fee + price/km
-5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
-
----
-
-## Phase 3: Internal Panel
-
-### Layout
-- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
-- Collapsible sidebar with icons
-- Active route highlighting
-
-### Agenda (Daily Operations)
-- Vertical time grid with columns per team member
-- Minimalist appointment cards showing client name + colored status bar
-- Drag & drop to reschedule, resize to adjust duration
-- Click opens a detailed side drawer with full appointment info and action buttons
-- No metrics or revenue on this view — pure operations
-
-### Atendimentos (Appointments Management)
-- Table with advanced filters: client, service, team member, date, type, status, value
-- Click opens drawer: client data, address (if home), services, status history, action buttons
-
-### Clientes
-- Clients appear only after a CONFIRMED appointment
-- Table: name, phone, email, total appointments, accumulated revenue, last visit
-- Click opens drawer with full history
-
-### Equipa
-- List: photo, name, role, home visits, linked services
-- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
-
-### Serviços
-- List: name, duration, price, # of team members, total sold, revenue
-- Click opens drawer with service analytics
-
-### Unidade
-- Edit unit details (same fields as onboarding step 1)
-
-### Configurações
-- Mobility settings, language, public page settings
-
----
-
-## Phase 4: Dashboard (Analytics)
-
-### Overview Cards
-- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
-
-### Team Performance
-- Table with per-member metrics + detailed drawer
-
-### Service Performance
-- Table with per-service metrics + detailed drawer
-
-### Schedule Structure
-- Occupancy heatmap
-- Most profitable time slot
-- Most profitable day
-
-### Global Filters
-- Date range, team member, service type
-
----
-
-## Phase 5: Public Booking Page
-
-### Sequential Flow
-1. Select services from catalog
-2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
-3. Select valid time slot (no conflicts, within business hours)
-4. Choose type: Unit or Home visit
-5. Enter client details (name, phone, email, address if home)
-6. Confirmation screen
-
-### Rules
-- Never show invalid slots
-- Never allow incompatible member selection
-- Appointment created with status `PENDING_APPROVAL`
-- Owner approves/rejects from the panel
-
----
-
-## UX Principles Applied Throughout
-- Dark-first theme with carefully chosen accent colors
-- 8px spacing grid, consistent border-radius
-- Smooth transitions (120–280ms), no bounce effects
-- Minimal visual noise — one insight at a time
-- System prevents errors rather than explaining them
-- Drawers for detail views instead of page navigation
+- Time grid: CSS Grid with `grid-template-rows` for hours, `grid-template-columns` for time label + team members
+- Appointment positioning: Absolute positioning within each column cell, calculating `top` from start time and `height` from duration
+- Drag: `onPointerDown` + `onPointerMove` + `onPointerUp` with state tracking (no library needed)
+- Long press: `setTimeout` on `onPointerDown`, cleared on `onPointerUp`/`onPointerMove`
+- Current time line: `useEffect` interval updating every minute
+- Reschedule modal: Simple Dialog with checkbox + Cancelar/Salvar buttons
 
