@@ -126,6 +126,21 @@ export default function Unit() {
       }
       setCoverPreview(unit.cover_url || null);
       setLogoPreview(unit.logo_url || null);
+      setMobility({
+        coverage_radius_km: String(unit.coverage_radius_km || 10),
+        base_fee: '0',
+        price_per_km: '0',
+      });
+      // Load mobility settings
+      supabase.from('mobility_settings').select('*').eq('unit_id', unit.id).maybeSingle().then(({ data }) => {
+        if (data) {
+          setMobility({
+            base_fee: String(data.base_fee || 0),
+            price_per_km: String(data.price_per_km || 0),
+            coverage_radius_km: String(unit.coverage_radius_km || 10),
+          });
+        }
+      });
     }
   }, [unit]);
 
