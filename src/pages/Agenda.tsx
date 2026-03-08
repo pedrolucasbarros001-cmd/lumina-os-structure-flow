@@ -283,7 +283,7 @@ export default function Agenda() {
         const colIdx = Math.max(0, Math.min(columns.length - 1, Math.floor((e.clientX - rect.left - TIME_LABEL_WIDTH) / colWidth)));
         setDragColIndex(colIdx);
       }
-    }, 500);
+    }, 300);
   }, [columns]);
 
   const cancelDrag = () => {
