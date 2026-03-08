@@ -1,129 +1,62 @@
 
 
-# LUMINA OS — Full Implementation Plan
+# Fix Public Booking + Complete End-to-End Appointment & Payment Flows
 
-## Overview
-LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
+## Root Cause: Public Booking Broken
 
----
+The `appointments` table has **two RESTRICTIVE RLS policies** for INSERT:
+1. "Public can create appointments for published units" (RESTRICTIVE)
+2. "Unit owners can manage appointments" (RESTRICTIVE — requires `auth.uid() = owner_id`)
 
-## Phase 1: Foundation & Database
+Since both RESTRICTIVE policies must pass, anonymous users can **never** insert. The insert silently fails (caught by try/catch), and `setSuccess(true)` never fires → blank page.
 
-### Database Schema (Supabase)
-- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
-- **services** — name, duration, price, description, image, unit_id
-- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
-- **team_member_services** — links team members to services they perform
-- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
-- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
-- **mobility_settings** — unit_id, base_fee, price_per_km
-- **user_roles** — user_id, role (owner, team_member) with RLS
-
-### Auth
-- Email + password authentication via Supabase Auth
-- Profile table linked to auth.users
-- Role-based access: owner vs team member
-
-### Multi-language
-- i18n system with PT and EN, language switcher in settings
+**Fix:** Change "Public can create" to **PERMISSIVE** so anonymous inserts work independently of the owner policy.
 
 ---
 
-## Phase 2: Onboarding Flow (5 Steps)
+## Changes
 
-A guided wizard that blocks access to the panel until complete:
+### 1. DB Migration — Fix RLS for public appointment creation
+- DROP the restrictive "Public can create appointments for published units" policy
+- Re-create it as **PERMISSIVE** so anon users can insert without needing to pass the owner check
 
-1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
-2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
-3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
-4. **Mobility** — if home visits enabled: base fee + price/km
-5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
+### 2. `src/pages/PublicBooking.tsx` — Fix submission + error handling
+- Add proper error handling with user-visible toast on failure
+- Show error state instead of blank page when insert fails
+- Add `payment_status: 'unpaid'` explicitly to the insert payload
 
----
+### 3. `src/pages/Agenda.tsx` — Complete reschedule logic
+- `handleRescheduleConfirm` currently is a no-op (line 297-300). Implement actual DB update:
+  - Update `datetime` and `team_member_id` on the appointment
+  - Invalidate queries after update
+  - Show toast confirmation
 
-## Phase 3: Internal Panel
+### 4. `src/components/AppointmentDetailSheet.tsx` — Add "Ações rápidas" menu + enrich detail view
+Based on the Fresha reference images, add:
+- **Quick Actions bottom sheet** (triggered by the `MoreHorizontal` button): "Adicionar nota", "Definir como recorrente", "Remarcar", "Ausência" (amber), "Cancelar" (red)
+- **"Checkout" button** alongside "Pagar agora" in the footer (like Fresha: three-dot menu + "Pagar agora" + "Checkout")
+- Update payment flow to save `payment_method`, `payment_status: 'paid'`, `paid_at`, and `amount_received` on the appointment when confirming payment
+- Add "Adicionar ao carrinho" step (from reference) showing client card + services with "Continuar para o pagamento" button before the payment method selection
 
-### Layout
-- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
-- Collapsible sidebar with icons
-- Active route highlighting
+### 5. `src/components/AppointmentDetailSheet.tsx` — Payment method grid (Fresha-style)
+Based on reference images, expand payment methods to a 2x2 grid:
+- Dinheiro (cash icon, green)
+- Vale-presente (gift icon)
+- Dividir pagamento (split icon)
+- Outros (dollar icon)
+Plus the existing MBWay/Card options
 
-### Agenda (Daily Operations)
-- Vertical time grid with columns per team member
-- Minimalist appointment cards showing client name + colored status bar
-- Drag & drop to reschedule, resize to adjust duration
-- Click opens a detailed side drawer with full appointment info and action buttons
-- No metrics or revenue on this view — pure operations
+### 6. `src/hooks/useAppointments.ts` — Add update mutation for reschedule
+- Add `useUpdateAppointment` mutation that can update `datetime`, `team_member_id`, and other fields
+- Used by both reschedule flow and payment confirmation
 
-### Atendimentos (Appointments Management)
-- Table with advanced filters: client, service, team member, date, type, status, value
-- Click opens drawer: client data, address (if home), services, status history, action buttons
+## Files
 
-### Clientes
-- Clients appear only after a CONFIRMED appointment
-- Table: name, phone, email, total appointments, accumulated revenue, last visit
-- Click opens drawer with full history
-
-### Equipa
-- List: photo, name, role, home visits, linked services
-- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
-
-### Serviços
-- List: name, duration, price, # of team members, total sold, revenue
-- Click opens drawer with service analytics
-
-### Unidade
-- Edit unit details (same fields as onboarding step 1)
-
-### Configurações
-- Mobility settings, language, public page settings
-
----
-
-## Phase 4: Dashboard (Analytics)
-
-### Overview Cards
-- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
-
-### Team Performance
-- Table with per-member metrics + detailed drawer
-
-### Service Performance
-- Table with per-service metrics + detailed drawer
-
-### Schedule Structure
-- Occupancy heatmap
-- Most profitable time slot
-- Most profitable day
-
-### Global Filters
-- Date range, team member, service type
-
----
-
-## Phase 5: Public Booking Page
-
-### Sequential Flow
-1. Select services from catalog
-2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
-3. Select valid time slot (no conflicts, within business hours)
-4. Choose type: Unit or Home visit
-5. Enter client details (name, phone, email, address if home)
-6. Confirmation screen
-
-### Rules
-- Never show invalid slots
-- Never allow incompatible member selection
-- Appointment created with status `PENDING_APPROVAL`
-- Owner approves/rejects from the panel
-
----
-
-## UX Principles Applied Throughout
-- Dark-first theme with carefully chosen accent colors
-- 8px spacing grid, consistent border-radius
-- Smooth transitions (120–280ms), no bounce effects
-- Minimal visual noise — one insight at a time
-- System prevents errors rather than explaining them
-- Drawers for detail views instead of page navigation
+| File | Action |
+|------|--------|
+| DB migration | Fix RLS: make public insert PERMISSIVE |
+| `src/pages/PublicBooking.tsx` | Fix error handling, show toast on failure |
+| `src/pages/Agenda.tsx` | Implement reschedule DB update |
+| `src/components/AppointmentDetailSheet.tsx` | Add quick actions menu, enrich checkout flow, save payment data |
+| `src/hooks/useAppointments.ts` | Add `useUpdateAppointment` mutation |
 
