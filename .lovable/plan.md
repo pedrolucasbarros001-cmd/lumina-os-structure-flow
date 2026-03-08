@@ -1,129 +1,108 @@
 
 
-# LUMINA OS — Full Implementation Plan
+# Fix Public Booking Home-Service Flow + Delivery Logistics + Enhanced Checkout
 
-## Overview
-LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
+## 1. DB Migration — Add `en_route` and `arrived` to appointment_status enum
 
----
+```sql
+ALTER TYPE appointment_status ADD VALUE IF NOT EXISTS 'en_route' AFTER 'confirmed';
+ALTER TYPE appointment_status ADD VALUE IF NOT EXISTS 'arrived' AFTER 'en_route';
+```
 
-## Phase 1: Foundation & Database
-
-### Database Schema (Supabase)
-- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
-- **services** — name, duration, price, description, image, unit_id
-- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
-- **team_member_services** — links team members to services they perform
-- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
-- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
-- **mobility_settings** — unit_id, base_fee, price_per_km
-- **user_roles** — user_id, role (owner, team_member) with RLS
-
-### Auth
-- Email + password authentication via Supabase Auth
-- Profile table linked to auth.users
-- Role-based access: owner vs team member
-
-### Multi-language
-- i18n system with PT and EN, language switcher in settings
+This enables the Glovo-style status progression for home appointments.
 
 ---
 
-## Phase 2: Onboarding Flow (5 Steps)
+## 2. New Component: `src/components/AddressAutocomplete.tsx`
 
-A guided wizard that blocks access to the panel until complete:
-
-1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
-2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
-3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
-4. **Mobility** — if home visits enabled: base fee + price/km
-5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
+- Dynamically loads Google Maps JS API via `<script>` if `VITE_GOOGLE_MAPS_KEY` is set
+- Renders an `<Input>` with Google Places Autocomplete attached
+- On place select: calls `onSelect({ address, lat, lng })`
+- **Fallback**: if no API key, renders a plain text input for manual address entry
+- Props: `onSelect`, `placeholder`, `defaultValue`
 
 ---
 
-## Phase 3: Internal Panel
+## 3. Update `src/hooks/usePublicUnit.ts` — Fetch mobility_settings
 
-### Layout
-- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
-- Collapsible sidebar with icons
-- Active route highlighting
-
-### Agenda (Daily Operations)
-- Vertical time grid with columns per team member
-- Minimalist appointment cards showing client name + colored status bar
-- Drag & drop to reschedule, resize to adjust duration
-- Click opens a detailed side drawer with full appointment info and action buttons
-- No metrics or revenue on this view — pure operations
-
-### Atendimentos (Appointments Management)
-- Table with advanced filters: client, service, team member, date, type, status, value
-- Click opens drawer: client data, address (if home), services, status history, action buttons
-
-### Clientes
-- Clients appear only after a CONFIRMED appointment
-- Table: name, phone, email, total appointments, accumulated revenue, last visit
-- Click opens drawer with full history
-
-### Equipa
-- List: photo, name, role, home visits, linked services
-- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
-
-### Serviços
-- List: name, duration, price, # of team members, total sold, revenue
-- Click opens drawer with service analytics
-
-### Unidade
-- Edit unit details (same fields as onboarding step 1)
-
-### Configurações
-- Mobility settings, language, public page settings
+Add a `mobilityQuery` that fetches `mobility_settings` where `unit_id = unitId`. Return `mobility` (base_fee, price_per_km) alongside existing `unit`, `services`, `team`.
 
 ---
 
-## Phase 4: Dashboard (Analytics)
+## 4. Update `src/pages/PublicBooking.tsx` — Address Step for Home Service
 
-### Overview Cards
-- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
+**New state**: `clientAddress`, `clientLat`, `clientLng`, `travelFee`, `distanceKm`
 
-### Team Performance
-- Table with per-member metrics + detailed drawer
+**Step logic change**: When `logistics === 'home'`, total steps = 6 (insert Step 5: Morada between Date/Hora and Confirmation). For `logistics === 'unit'`, steps remain 5.
 
-### Service Performance
-- Table with per-service metrics + detailed drawer
+**Step 5 (Morada)**: Shows `<AddressAutocomplete>`. On address select:
+- Calculate `distance_km` via Haversine (unit lat/lng vs client lat/lng)
+- If distance > `coverage_radius_km` → show "Fora da zona de cobertura" error, block advance
+- Compute `travelFee = base_fee + (distance_km * price_per_km)`
+- Show static Google Maps image preview if API key available
 
-### Schedule Structure
-- Occupancy heatmap
-- Most profitable time slot
-- Most profitable day
+**Footer subtotal**: Include `travelFee` when `logistics === 'home'`.
 
-### Global Filters
-- Date range, team member, service type
+**Submit payload**: Add `address`, `displacement_fee`, `distance_km` to the insert.
 
 ---
 
-## Phase 5: Public Booking Page
+## 5. New Component: `src/components/SlideToAction.tsx`
 
-### Sequential Flow
-1. Select services from catalog
-2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
-3. Select valid time slot (no conflicts, within business hours)
-4. Choose type: Unit or Home visit
-5. Enter client details (name, phone, email, address if home)
-6. Confirmation screen
-
-### Rules
-- Never show invalid slots
-- Never allow incompatible member selection
-- Appointment created with status `PENDING_APPROVAL`
-- Owner approves/rejects from the panel
+A swipe-to-confirm button to prevent accidental taps during fieldwork:
+- Container with a draggable circle/thumb
+- User drags left→right; if released past 80% threshold → fires `onConfirm`
+- Below threshold → spring-back animation
+- Props: `label`, `color` (yellow/green/blue), `onConfirm`, `loading`
 
 ---
 
-## UX Principles Applied Throughout
-- Dark-first theme with carefully chosen accent colors
-- 8px spacing grid, consistent border-radius
-- Smooth transitions (120–280ms), no bounce effects
-- Minimal visual noise — one insight at a time
-- System prevents errors rather than explaining them
-- Drawers for detail views instead of page navigation
+## 6. Update `src/components/AppointmentDetailSheet.tsx`
+
+### 6a. Delivery Status Flow (for `type === 'home'`)
+
+Add `en_route` and `arrived` to `STATUS_LABELS`. Update the footer logic:
+
+| Current Status | Action | Next Status |
+|---|---|---|
+| `confirmed` (home) | SlideToAction "Iniciar Trajeto" (yellow) | `en_route` + open Google Maps directions |
+| `en_route` | SlideToAction "Check-in" (green) | `arrived` |
+| `arrived` | Button "Checkout" | → cart flow |
+
+Show mini-map (static Google Maps image) in detail view when appointment has `address`.
+
+### 6b. Enhanced Checkout Flow (Fresha-style)
+
+Add views to the state machine: `'tip'` and `'processing'`.
+
+**Flow**: Cart → **Tip** → Checkout (payment) → **Processing** → Done
+
+- **`tip` view**: 2x2 grid (Sem gorjeta, 10%, 18%, 25%) + custom tip input. Footer: "A pagar €X" + "Continuar para o pagamento"
+- **`processing` view**: Animated purple gradient circle + "Processando pagamento" text, 1.5s timer then auto-transition to `done`
+- **`done` view**: Replace green circle with purple gradient orb + check icon + "Venda concluída" text (matching Fresha reference)
+
+### 6c. Header color changes for home appointments
+
+- `en_route` → yellow/amber header
+- `arrived` → green header
+- Default → sky blue (existing)
+
+---
+
+## 7. Environment Variable
+
+User needs to add `VITE_GOOGLE_MAPS_KEY` to env. The `AddressAutocomplete` component degrades gracefully to a plain text input without it.
+
+---
+
+## Files Summary
+
+| File | Action |
+|---|---|
+| DB migration | Add `en_route`, `arrived` to enum |
+| `src/components/AddressAutocomplete.tsx` | Create — Google Maps autocomplete |
+| `src/components/SlideToAction.tsx` | Create — swipe-to-confirm |
+| `src/hooks/usePublicUnit.ts` | Add mobility_settings query |
+| `src/pages/PublicBooking.tsx` | Address step, distance calc, travel fee |
+| `src/components/AppointmentDetailSheet.tsx` | Delivery flow + tip + processing + done redesign |
 
