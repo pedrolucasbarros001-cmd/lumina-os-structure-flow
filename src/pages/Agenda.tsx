@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { format, addDays, subDays, parseISO, startOfWeek, isSameDay, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu } from 'lucide-react';
-import { useAppointments, Appointment, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
+import { useAppointments, Appointment, useUpdateAppointmentStatus, useUpdateAppointment } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import NewAppointmentSheet from '@/components/NewAppointmentSheet';
