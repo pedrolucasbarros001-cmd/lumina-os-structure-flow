@@ -14,6 +14,7 @@ import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
+import { CompanySwitcher } from '@/components/CompanySwitcher';
 import {
   Sidebar,
   SidebarContent,
