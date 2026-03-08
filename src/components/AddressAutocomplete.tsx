@@ -62,7 +62,7 @@ export default function AddressAutocomplete({ onSelect, placeholder = 'Insira a 
 
   const initAutocomplete = useCallback(() => {
     if (!inputRef.current || !window.google?.maps?.places || autocompleteRef.current) return;
-    const ac = new google.maps.places.Autocomplete(inputRef.current, {
+    const ac = new window.google.maps.places.Autocomplete(inputRef.current, {
       types: ['address'],
       fields: ['formatted_address', 'geometry'],
     });
