@@ -397,7 +397,8 @@ export default function Agenda() {
       {/* ─── Time Grid ─── */}
       <div
         ref={gridRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative touch-pan-y"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative select-none"
+        style={{ touchAction: 'manipulation' }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
