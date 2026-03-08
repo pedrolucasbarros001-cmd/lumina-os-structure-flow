@@ -13,6 +13,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 const HOUR_HEIGHT = 80;
 const START_HOUR = 0;
