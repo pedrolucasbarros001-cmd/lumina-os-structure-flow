@@ -4,6 +4,7 @@ import {
   Users,
   UserCog,
   ShoppingBag,
+  Receipt,
   Building2,
   Settings,
   LogOut,
