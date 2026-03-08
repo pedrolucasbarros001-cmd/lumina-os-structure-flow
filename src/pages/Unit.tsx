@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Building2, Phone, MapPin, Clock, Save, Globe, Link, Copy, CheckCheck, ExternalLink, QrCode, Eye, EyeOff, Star, FileText } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Building2, Phone, MapPin, Clock, Save, Globe, Link, Copy, CheckCheck, ExternalLink, Star, FileText, Camera, ImagePlus } from 'lucide-react';
 import { useUnit } from '@/hooks/useUnit';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,12 +22,11 @@ const defaultHours = (): BusinessHours =>
   Object.fromEntries(DAYS.map(d => [d.key, { open: !['sat', 'sun'].includes(d.key), start: '09:00', end: '18:00' }]));
 
 // ─────────────────────────────────────────
-// BOOKING LINK CARD (The "Magia Pública")
+// BOOKING LINK CARD
 // ─────────────────────────────────────────
 function BookingLinkCard({ slug, isPublished, onPublish }: { slug: string; isPublished: boolean; onPublish: (v: boolean) => void }) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-
   const bookingUrl = slug ? `${window.location.origin}/s/${slug}` : '';
 
   const handleCopy = () => {
@@ -47,14 +46,12 @@ function BookingLinkCard({ slug, isPublished, onPublish }: { slug: string; isPub
           <Switch checked={isPublished} onCheckedChange={onPublish} />
         </div>
       </div>
-
       <div className={cn(
         'bg-card border rounded-2xl p-4 space-y-4 transition-all',
         isPublished ? 'border-primary/30 bg-primary/5' : 'border-border/50 opacity-60'
       )}>
         {isPublished && slug ? (
           <>
-            {/* Preview */}
             <div className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border/50">
               <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                 <Globe className="w-4 h-4 text-primary" />
@@ -64,8 +61,6 @@ function BookingLinkCard({ slug, isPublished, onPublish }: { slug: string; isPub
                 <p className="text-sm font-mono font-medium truncate text-primary">/s/{slug}</p>
               </div>
             </div>
-
-            {/* Actions */}
             <div className="grid grid-cols-2 gap-2">
               <Button size="sm" variant="outline" onClick={handleCopy} className="rounded-xl">
                 {copied ? <CheckCheck className="w-4 h-4 mr-1.5 text-emerald-400" /> : <Copy className="w-4 h-4 mr-1.5" />}
@@ -76,10 +71,6 @@ function BookingLinkCard({ slug, isPublished, onPublish }: { slug: string; isPub
                 Visualizar
               </Button>
             </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Partilhe este link com os seus clientes para agendamentos online.
-            </p>
           </>
         ) : (
           <div className="text-center py-2 space-y-2">
@@ -104,12 +95,19 @@ export default function Unit() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
   const [form, setForm] = useState({
     name: '', phone: '', address: '', bio: '',
     accepts_home_visits: false, is_published: false, slug: '',
   });
   const [businessHours, setBusinessHours] = useState<BusinessHours>(defaultHours());
   const [saving, setSaving] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (unit) {
@@ -125,8 +123,50 @@ export default function Unit() {
       if (unit.business_hours && typeof unit.business_hours === 'object') {
         setBusinessHours({ ...defaultHours(), ...(unit.business_hours as BusinessHours) });
       }
+      setCoverPreview(unit.cover_url || null);
+      setLogoPreview(unit.logo_url || null);
     }
   }, [unit]);
+
+  const uploadImage = async (file: File, type: 'cover' | 'logo') => {
+    if (!unit) return;
+    const setUploading = type === 'cover' ? setUploadingCover : setUploadingLogo;
+    const setPreview = type === 'cover' ? setCoverPreview : setLogoPreview;
+    setUploading(true);
+
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${unit.id}/${type}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('unit-assets')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('unit-assets')
+        .getPublicUrl(path);
+
+      const urlWithCache = `${publicUrl}?t=${Date.now()}`;
+      const updateField = type === 'cover' ? 'cover_url' : 'logo_url';
+      await supabase.from('units').update({ [updateField]: urlWithCache }).eq('id', unit.id);
+
+      setPreview(urlWithCache);
+      queryClient.invalidateQueries({ queryKey: ['unit'] });
+      toast({ title: `${type === 'cover' ? 'Capa' : 'Logo'} atualizado! ✅` });
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao fazer upload.' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'cover' | 'logo') => {
+    const file = e.target.files?.[0];
+    if (file) uploadImage(file, type);
+    e.target.value = '';
+  };
 
   const handleSave = async () => {
     if (!unit && !user) return;
@@ -158,19 +198,45 @@ export default function Unit() {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-4 space-y-6 pb-28">
+      {/* Hidden file inputs */}
+      <input ref={coverInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'cover')} />
+      <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={e => handleFileSelect(e, 'logo')} />
 
       {/* ── GOOGLE MY BUSINESS PREVIEW ── */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">Pré-visualização</h2>
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
-          {/* Cover */}
-          <div className="h-28 bg-gradient-to-br from-primary/40 to-accent/40 relative">
-            {unit?.cover_url && <img src={unit.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-            {/* Logo overlay */}
-            <div className="absolute -bottom-6 left-4 w-14 h-14 rounded-2xl border-2 border-background bg-muted flex items-center justify-center overflow-hidden">
-              {unit?.logo_url ? <img src={unit.logo_url} alt="" className="w-full h-full object-cover" /> : <Building2 className="w-6 h-6 text-muted-foreground" />}
+          {/* Cover — clickable */}
+          <button
+            onClick={() => unit && coverInputRef.current?.click()}
+            disabled={!unit || uploadingCover}
+            className="w-full h-28 bg-gradient-to-br from-primary/40 to-accent/40 relative group cursor-pointer disabled:cursor-not-allowed"
+          >
+            {coverPreview && <img src={coverPreview} alt="" className="absolute inset-0 w-full h-full object-cover" />}
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+              <div className={cn('opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-white text-sm font-medium', uploadingCover && 'opacity-100')}>
+                {uploadingCover ? (
+                  <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <><ImagePlus className="w-5 h-5" /> Alterar Capa</>
+                )}
+              </div>
             </div>
-          </div>
+            {/* Logo overlay — clickable */}
+            <div
+              onClick={e => { e.stopPropagation(); unit && logoInputRef.current?.click(); }}
+              className="absolute -bottom-6 left-4 w-14 h-14 rounded-2xl border-2 border-background bg-muted flex items-center justify-center overflow-hidden group/logo cursor-pointer"
+            >
+              {logoPreview ? (
+                <img src={logoPreview} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <Building2 className="w-6 h-6 text-muted-foreground" />
+              )}
+              <div className="absolute inset-0 bg-black/0 group-hover/logo:bg-black/40 transition-colors flex items-center justify-center">
+                <Camera className={cn('w-4 h-4 text-white opacity-0 group-hover/logo:opacity-100 transition-opacity', uploadingLogo && 'opacity-100 animate-spin')} />
+              </div>
+            </div>
+          </button>
           <div className="pt-8 pb-4 px-4 space-y-1">
             <h3 className="font-bold text-lg">{form.name || 'Nome do Negócio'}</h3>
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -183,7 +249,7 @@ export default function Unit() {
         </div>
       </section>
 
-      {/* ── BOOKING LINK (The Magic Public Section) ── */}
+      {/* ── BOOKING LINK ── */}
       <BookingLinkCard
         slug={form.slug}
         isPublished={form.is_published}

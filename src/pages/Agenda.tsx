@@ -342,12 +342,15 @@ export default function Agenda() {
         )}
 
         <div className="flex items-center justify-between">
-          <button className="flex items-center gap-1.5 group" onClick={goToday}>
-            <h2 className="text-lg font-bold capitalize">
-              {format(selected, "EEEE, d 'de' MMMM", { locale: pt })}
-            </h2>
-            <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-          </button>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="shrink-0 -ml-1" />
+            <button className="flex items-center gap-1.5 group" onClick={goToday}>
+              <h2 className="text-lg font-bold capitalize">
+                {format(selected, "EEEE, d 'de' MMMM", { locale: pt })}
+              </h2>
+              <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </button>
+          </div>
           <div className="flex items-center gap-1">
             <button onClick={goPrev} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
               <ChevronLeft className="w-4 h-4" />
