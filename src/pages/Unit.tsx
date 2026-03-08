@@ -209,6 +209,16 @@ export default function Unit() {
             </div>
           )}
           <div className="space-y-1.5">
+            <Label className="flex items-center gap-2"><FileText className="w-4 h-4" />Bio / Descrição</Label>
+            <Textarea
+              value={form.bio}
+              onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
+              placeholder="Descreva brevemente o seu negócio..."
+              rows={3}
+              className="rounded-xl"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label className="flex items-center gap-2"><Link className="w-4 h-4" />URL do Negócio (Slug)</Label>
             <div className="flex gap-2">
               <div className="flex items-center flex-1 bg-muted rounded-xl border border-border/50 px-3 gap-1">
