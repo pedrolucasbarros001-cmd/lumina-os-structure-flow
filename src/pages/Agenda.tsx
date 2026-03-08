@@ -2,12 +2,13 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { format, addDays, subDays, parseISO, startOfWeek, isSameDay, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu } from 'lucide-react';
-import { useAppointments, Appointment, useUpdateAppointmentStatus } from '@/hooks/useAppointments';
+import { useAppointments, Appointment, useUpdateAppointmentStatus, useUpdateAppointment } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import NewAppointmentSheet from '@/components/NewAppointmentSheet';
 import AppointmentDetailSheet from '@/components/AppointmentDetailSheet';
 import AgendaTutorialOverlay, { useAgendaTutorial } from '@/components/AgendaTutorialOverlay';
+import { useToast } from '@/hooks/use-toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -294,8 +295,21 @@ export default function Agenda() {
     isDragging.current = false;
   };
 
+  const updateAppointment = useUpdateAppointment();
+  const { toast } = useToast();
+
   const handleRescheduleConfirm = async (_notify: boolean) => {
-    // In production: update datetime + team_member_id in DB
+    if (!rescheduleTarget) return;
+    try {
+      await updateAppointment.mutateAsync({
+        id: rescheduleTarget.appt.id,
+        datetime: rescheduleTarget.newTime,
+        team_member_id: rescheduleTarget.newTeamMemberId || null,
+      });
+      toast({ title: 'Agendamento remarcado!' });
+    } catch (e: any) {
+      toast({ title: 'Erro ao remarcar', description: e?.message, variant: 'destructive' });
+    }
     setRescheduleTarget(null);
   };
 
