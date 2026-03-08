@@ -128,4 +128,17 @@
     transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+  .frosted-glass {
+    @apply backdrop-blur-xl border rounded-2xl;
+    background: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.5);
+  }
+  .dark .frosted-glass {
+    background: hsl(228 18% 11% / 0.6);
+    border-color: hsl(0 0% 100% / 0.08);
+  }
+  .privacy-blur {
+    filter: blur(8px);
+    user-select: none;
+  }
 }
