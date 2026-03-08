@@ -102,6 +102,7 @@ export default function Unit() {
     name: '', phone: '', address: '', bio: '',
     accepts_home_visits: false, is_published: false, slug: '',
   });
+  const [mobility, setMobility] = useState({ base_fee: '0', price_per_km: '0', coverage_radius_km: '10' });
   const [businessHours, setBusinessHours] = useState<BusinessHours>(defaultHours());
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
