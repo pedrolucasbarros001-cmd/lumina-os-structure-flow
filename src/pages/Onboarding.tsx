@@ -54,7 +54,8 @@ export default function Onboarding() {
                     name: businessName,
                     business_type: businessType,
                     logistics_type: logisticsType,
-                    accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid'
+                    accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid',
+                    coverage_radius_km: (logisticsType === 'home' || logisticsType === 'hybrid') ? parseFloat(mobilityForm.coverage_radius_km) || 0 : 0,
                 })
                 .select()
                 .single();
