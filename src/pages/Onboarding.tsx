@@ -84,6 +84,15 @@ export default function Onboarding() {
 
             if (profileError) throw profileError;
 
+            // 4. Create mobility settings if home/hybrid
+            if (logisticsType === 'home' || logisticsType === 'hybrid') {
+                await supabase.from('mobility_settings').insert({
+                    unit_id: unit.id,
+                    base_fee: parseFloat(mobilityForm.base_fee) || 0,
+                    price_per_km: parseFloat(mobilityForm.price_per_km) || 0,
+                });
+            }
+
             // Invalidate queries & redirect
             await queryClient.invalidateQueries();
             setStep('done');
