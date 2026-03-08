@@ -76,11 +76,11 @@ export default function PublicBooking() {
     return slots;
   }, [unit, selectedDate, totalDuration]);
 
-  const toggleService = (s: ServiceItem) => {
+  const toggleService = (s: any) => {
     setSelectedServices(prev =>
       prev.find(x => x.id === s.id)
         ? prev.filter(x => x.id !== s.id)
-        : [...prev, { id: s.id, name: s.name, duration: s.duration, price: Number(s.price) }]
+        : [...prev, { id: s.id, name: s.name, duration: s.duration, price: Number(s.price), is_home_service: s.is_home_service }]
     );
   };
 
