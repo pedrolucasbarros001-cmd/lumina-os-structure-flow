@@ -175,6 +175,11 @@ export default function Agenda() {
   const gridRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
+  // Edge scrolling refs
+  const edgeScrollRAF = useRef<number | null>(null);
+  const EDGE_THRESHOLD = 60;
+  const SCROLL_SPEED = 8;
+
   const dateStr = format(selected, 'yyyy-MM-dd');
   const { data: appointments = [] } = useAppointments(dateStr);
   const { data: teamMembers = [] } = useTeamMembers();
@@ -247,8 +252,42 @@ export default function Agenda() {
       const colWidth = (rect.width - TIME_LABEL_WIDTH) / columns.length;
       const colIdx = Math.max(0, Math.min(columns.length - 1, Math.floor((relX - TIME_LABEL_WIDTH) / colWidth)));
       setDragColIndex(colIdx);
+
+      // Edge scrolling logic
+      const pointerYInContainer = e.clientY - rect.top;
+      const containerHeight = rect.height;
+
+      // Cancel any existing RAF
+      if (edgeScrollRAF.current) {
+        cancelAnimationFrame(edgeScrollRAF.current);
+        edgeScrollRAF.current = null;
+      }
+
+      // Check if near edges and start auto-scroll
+      if (pointerYInContainer < EDGE_THRESHOLD) {
+        // Near top - scroll up
+        const scrollUp = () => {
+          if (isDragging.current && gridRef.current && gridRef.current.scrollTop > 0) {
+            gridRef.current.scrollTop -= SCROLL_SPEED;
+            setDragGhostY(prev => prev - SCROLL_SPEED);
+            edgeScrollRAF.current = requestAnimationFrame(scrollUp);
+          }
+        };
+        edgeScrollRAF.current = requestAnimationFrame(scrollUp);
+      } else if (pointerYInContainer > containerHeight - EDGE_THRESHOLD) {
+        // Near bottom - scroll down
+        const maxScroll = gridRef.current.scrollHeight - containerHeight;
+        const scrollDown = () => {
+          if (isDragging.current && gridRef.current && gridRef.current.scrollTop < maxScroll) {
+            gridRef.current.scrollTop += SCROLL_SPEED;
+            setDragGhostY(prev => prev + SCROLL_SPEED);
+            edgeScrollRAF.current = requestAnimationFrame(scrollDown);
+          }
+        };
+        edgeScrollRAF.current = requestAnimationFrame(scrollDown);
+      }
     }
-  }, [dragAppt, columns]);
+  }, [dragAppt, columns, EDGE_THRESHOLD, SCROLL_SPEED]);
 
   const handleGridPointerUp = useCallback(() => {
     if (longPressTimer.current) {
@@ -256,6 +295,13 @@ export default function Agenda() {
       longPressTimer.current = null;
     }
     longPressStartPos.current = null;
+    
+    // Cancel edge scrolling
+    if (edgeScrollRAF.current) {
+      cancelAnimationFrame(edgeScrollRAF.current);
+      edgeScrollRAF.current = null;
+    }
+    
     if (isDragging.current && dragAppt) {
       isDragging.current = false;
       const snappedMinutes = Math.round((dragGhostY / HOUR_HEIGHT) * 60 / 15) * 15;
@@ -291,6 +337,11 @@ export default function Agenda() {
   }, [columns]);
 
   const cancelDrag = () => {
+    // Cancel edge scrolling
+    if (edgeScrollRAF.current) {
+      cancelAnimationFrame(edgeScrollRAF.current);
+      edgeScrollRAF.current = null;
+    }
     setDragAppt(null);
     isDragging.current = false;
   };
@@ -417,8 +468,11 @@ export default function Agenda() {
       {/* ─── Time Grid ─── */}
       <div
         ref={gridRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative select-none"
-        style={{ touchAction: 'manipulation' }}
+        className={cn(
+          "flex-1 overflow-x-hidden relative select-none",
+          dragAppt ? "overflow-y-hidden" : "overflow-y-auto"
+        )}
+        style={{ touchAction: dragAppt ? 'none' : 'manipulation' }}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
