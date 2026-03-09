@@ -37,7 +37,6 @@ export default function Signup() {
       // Store pending plan for post-confirmation processing
       localStorage.setItem('pending_plan', plan);
       toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar.' });
-      navigate('/login');
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
