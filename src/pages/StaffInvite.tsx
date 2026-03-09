@@ -52,8 +52,7 @@ export default function StaffInvite() {
           .from('staff_invitations')
           .select(`
             *,
-            units:unit_id (id, name, logo_url),
-            invited_by_profile:profiles!invited_by (full_name)
+            units:unit_id (id, name, logo_url)
           `)
           .eq('token', token)
           .eq('status', 'pending')
