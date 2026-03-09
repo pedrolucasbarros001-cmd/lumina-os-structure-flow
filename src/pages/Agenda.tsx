@@ -252,8 +252,42 @@ export default function Agenda() {
       const colWidth = (rect.width - TIME_LABEL_WIDTH) / columns.length;
       const colIdx = Math.max(0, Math.min(columns.length - 1, Math.floor((relX - TIME_LABEL_WIDTH) / colWidth)));
       setDragColIndex(colIdx);
+
+      // Edge scrolling logic
+      const pointerYInContainer = e.clientY - rect.top;
+      const containerHeight = rect.height;
+
+      // Cancel any existing RAF
+      if (edgeScrollRAF.current) {
+        cancelAnimationFrame(edgeScrollRAF.current);
+        edgeScrollRAF.current = null;
+      }
+
+      // Check if near edges and start auto-scroll
+      if (pointerYInContainer < EDGE_THRESHOLD) {
+        // Near top - scroll up
+        const scrollUp = () => {
+          if (isDragging.current && gridRef.current && gridRef.current.scrollTop > 0) {
+            gridRef.current.scrollTop -= SCROLL_SPEED;
+            setDragGhostY(prev => prev - SCROLL_SPEED);
+            edgeScrollRAF.current = requestAnimationFrame(scrollUp);
+          }
+        };
+        edgeScrollRAF.current = requestAnimationFrame(scrollUp);
+      } else if (pointerYInContainer > containerHeight - EDGE_THRESHOLD) {
+        // Near bottom - scroll down
+        const maxScroll = gridRef.current.scrollHeight - containerHeight;
+        const scrollDown = () => {
+          if (isDragging.current && gridRef.current && gridRef.current.scrollTop < maxScroll) {
+            gridRef.current.scrollTop += SCROLL_SPEED;
+            setDragGhostY(prev => prev + SCROLL_SPEED);
+            edgeScrollRAF.current = requestAnimationFrame(scrollDown);
+          }
+        };
+        edgeScrollRAF.current = requestAnimationFrame(scrollDown);
+      }
     }
-  }, [dragAppt, columns]);
+  }, [dragAppt, columns, EDGE_THRESHOLD, SCROLL_SPEED]);
 
   const handleGridPointerUp = useCallback(() => {
     if (longPressTimer.current) {
