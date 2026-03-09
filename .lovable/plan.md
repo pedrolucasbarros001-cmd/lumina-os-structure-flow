@@ -1,129 +1,54 @@
 
 
-# LUMINA OS — Full Implementation Plan
+# Landing Page Pública + Registo com Plano
 
-## Overview
-LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
+## Análise
 
----
+- A rota `/` atualmente redireciona para `/dashboard` dentro de `ProtectedRoute`
+- O trigger `handle_new_user()` já cria uma subscription trial automática
+- Preciso criar uma landing page pública e modificar o Signup para atualizar o plano após registo
 
-## Phase 1: Foundation & Database
+## Implementação
 
-### Database Schema (Supabase)
-- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
-- **services** — name, duration, price, description, image, unit_id
-- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
-- **team_member_services** — links team members to services they perform
-- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
-- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
-- **mobility_settings** — unit_id, base_fee, price_per_km
-- **user_roles** — user_id, role (owner, team_member) with RLS
+### 1. Nova Landing Page (`src/pages/Index.tsx`)
 
-### Auth
-- Email + password authentication via Supabase Auth
-- Profile table linked to auth.users
-- Role-based access: owner vs team member
+Página estilo Apple com:
+- **Hero Section**: Título grande + botões "Começar" (→ pricing) e "Entrar" (→ /login)
+- **Features Section**: 3 cards (Booking fluido, Motor Delivery, CRM de Equipa) com tipografia grande
+- **Pricing Section**: 2 cards lado a lado
+  - Mensal €69 → `/signup?plan=monthly`
+  - Anual €64,75/mês (highlight roxo) → `/signup?plan=annual`
+- Animações suaves, glassmorphism, dark mode ready
 
-### Multi-language
-- i18n system with PT and EN, language switcher in settings
+### 2. Atualizar Routing (`src/App.tsx`)
 
----
+```text
+/           → Index (público, sem auth)
+/dashboard  → ProtectedRoute + PanelLayout (autenticados)
+```
 
-## Phase 2: Onboarding Flow (5 Steps)
+Remover o redirect automático de `/` para `/dashboard` dentro do ProtectedRoute.
 
-A guided wizard that blocks access to the panel until complete:
+### 3. Atualizar Signup (`src/pages/Signup.tsx`)
 
-1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
-2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
-3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
-4. **Mobility** — if home visits enabled: base fee + price/km
-5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
+- Ler `plan` do URL via `useSearchParams`
+- Mostrar badge visual do plano selecionado (Mensal/Anual)
+- Após `signUp()` com sucesso:
+  - Se `plan === 'annual'`, fazer UPDATE na `subscriptions` para mudar `plan_type` para `annual`
+  - O trigger já cria trial subscription, só precisamos atualizar o tipo
 
----
+### 4. CSS Adicional (`src/index.css`)
 
-## Phase 3: Internal Panel
-
-### Layout
-- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
-- Collapsible sidebar with icons
-- Active route highlighting
-
-### Agenda (Daily Operations)
-- Vertical time grid with columns per team member
-- Minimalist appointment cards showing client name + colored status bar
-- Drag & drop to reschedule, resize to adjust duration
-- Click opens a detailed side drawer with full appointment info and action buttons
-- No metrics or revenue on this view — pure operations
-
-### Atendimentos (Appointments Management)
-- Table with advanced filters: client, service, team member, date, type, status, value
-- Click opens drawer: client data, address (if home), services, status history, action buttons
-
-### Clientes
-- Clients appear only after a CONFIRMED appointment
-- Table: name, phone, email, total appointments, accumulated revenue, last visit
-- Click opens drawer with full history
-
-### Equipa
-- List: photo, name, role, home visits, linked services
-- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
-
-### Serviços
-- List: name, duration, price, # of team members, total sold, revenue
-- Click opens drawer with service analytics
-
-### Unidade
-- Edit unit details (same fields as onboarding step 1)
-
-### Configurações
-- Mobility settings, language, public page settings
+Adicionar classe `.glow-card` para o efeito de brilho roxo no card anual.
 
 ---
 
-## Phase 4: Dashboard (Analytics)
+## Ficheiros
 
-### Overview Cards
-- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
-
-### Team Performance
-- Table with per-member metrics + detailed drawer
-
-### Service Performance
-- Table with per-service metrics + detailed drawer
-
-### Schedule Structure
-- Occupancy heatmap
-- Most profitable time slot
-- Most profitable day
-
-### Global Filters
-- Date range, team member, service type
-
----
-
-## Phase 5: Public Booking Page
-
-### Sequential Flow
-1. Select services from catalog
-2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
-3. Select valid time slot (no conflicts, within business hours)
-4. Choose type: Unit or Home visit
-5. Enter client details (name, phone, email, address if home)
-6. Confirmation screen
-
-### Rules
-- Never show invalid slots
-- Never allow incompatible member selection
-- Appointment created with status `PENDING_APPROVAL`
-- Owner approves/rejects from the panel
-
----
-
-## UX Principles Applied Throughout
-- Dark-first theme with carefully chosen accent colors
-- 8px spacing grid, consistent border-radius
-- Smooth transitions (120–280ms), no bounce effects
-- Minimal visual noise — one insight at a time
-- System prevents errors rather than explaining them
-- Drawers for detail views instead of page navigation
+| Ficheiro | Ação |
+|----------|------|
+| `src/pages/Index.tsx` | Recriar — Landing page completa |
+| `src/App.tsx` | Editar — Separar rota `/` como pública |
+| `src/pages/Signup.tsx` | Editar — Ler plan param e atualizar subscription |
+| `src/index.css` | Adicionar — Classe glow-card |
 
