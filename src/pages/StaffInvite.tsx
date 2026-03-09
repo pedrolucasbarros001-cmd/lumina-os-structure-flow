@@ -24,9 +24,6 @@ interface StaffInvitation {
     name: string;
     logo_url?: string;
   };
-  invited_by_profile?: {
-    full_name: string;
-  };
 }
 
 type InviteStep = 'loading' | 'welcome' | 'register' | 'done' | 'error';
