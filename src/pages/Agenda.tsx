@@ -175,6 +175,11 @@ export default function Agenda() {
   const gridRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
+  // Edge scrolling refs
+  const edgeScrollRAF = useRef<number | null>(null);
+  const EDGE_THRESHOLD = 60;
+  const SCROLL_SPEED = 8;
+
   const dateStr = format(selected, 'yyyy-MM-dd');
   const { data: appointments = [] } = useAppointments(dateStr);
   const { data: teamMembers = [] } = useTeamMembers();
