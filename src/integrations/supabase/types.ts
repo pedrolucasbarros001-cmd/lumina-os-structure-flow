@@ -265,12 +265,15 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          invited_via: string | null
           language: string
+          linked_unit_id: string | null
           onboarding_completed: boolean
           service_model: string | null
           setup_completed: boolean
           team_size: string | null
           updated_at: string
+          user_type: string | null
         }
         Insert: {
           agenda_tutorial_completed?: boolean
@@ -279,12 +282,15 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          invited_via?: string | null
           language?: string
+          linked_unit_id?: string | null
           onboarding_completed?: boolean
           service_model?: string | null
           setup_completed?: boolean
           team_size?: string | null
           updated_at?: string
+          user_type?: string | null
         }
         Update: {
           agenda_tutorial_completed?: boolean
@@ -293,14 +299,25 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          invited_via?: string | null
           language?: string
+          linked_unit_id?: string | null
           onboarding_completed?: boolean
           service_model?: string | null
           setup_completed?: boolean
           team_size?: string | null
           updated_at?: string
+          user_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_linked_unit_id_fkey"
+            columns: ["linked_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -348,6 +365,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "services_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invitations: {
+        Row: {
+          commission_rate: number | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          name: string | null
+          role: string | null
+          status: string | null
+          token: string
+          unit_id: string
+        }
+        Insert: {
+          commission_rate?: number | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          token: string
+          unit_id: string
+        }
+        Update: {
+          commission_rate?: number | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          token?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
@@ -478,6 +545,7 @@ export type Database = {
           bio: string | null
           business_hours: Json
           business_type: string | null
+          categories: string[] | null
           cover_url: string | null
           coverage_radius_km: number
           created_at: string
@@ -501,6 +569,7 @@ export type Database = {
           bio?: string | null
           business_hours?: Json
           business_type?: string | null
+          categories?: string[] | null
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
@@ -524,6 +593,7 @@ export type Database = {
           bio?: string | null
           business_hours?: Json
           business_type?: string | null
+          categories?: string[] | null
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
