@@ -35,7 +35,7 @@
     --input: 220 15% 88%;
     --ring: 252 85% 60%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     --sidebar-background: 220 20% 96%;
     --sidebar-foreground: 220 10% 30%;
@@ -55,23 +55,23 @@
   }
 
   .dark {
-    --background: 228 18% 8%;
+    --background: 0 0% 0%;
     --foreground: 220 15% 92%;
 
-    --card: 228 18% 11%;
+    --card: 0 0% 6%;
     --card-foreground: 220 15% 92%;
 
-    --popover: 228 18% 11%;
+    --popover: 0 0% 6%;
     --popover-foreground: 220 15% 92%;
 
     --primary: 252 85% 65%;
     --primary-foreground: 0 0% 100%;
     --primary-glow: 252 90% 75%;
 
-    --secondary: 228 15% 16%;
+    --secondary: 0 0% 10%;
     --secondary-foreground: 220 15% 92%;
 
-    --muted: 228 15% 16%;
+    --muted: 0 0% 10%;
     --muted-foreground: 220 10% 55%;
 
     --accent: 168 70% 50%;
@@ -80,17 +80,17 @@
     --destructive: 0 72% 50%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 228 15% 18%;
-    --input: 228 15% 18%;
+    --border: 0 0% 12%;
+    --input: 0 0% 12%;
     --ring: 252 85% 65%;
 
-    --sidebar-background: 228 18% 6%;
+    --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 220 15% 80%;
     --sidebar-primary: 252 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 228 15% 14%;
+    --sidebar-accent: 0 0% 8%;
     --sidebar-accent-foreground: 220 15% 92%;
-    --sidebar-border: 228 15% 14%;
+    --sidebar-border: 0 0% 10%;
     --sidebar-ring: 252 85% 65%;
 
     --success: 152 60% 48%;
@@ -110,10 +110,43 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    position: relative;
+    overflow-x: hidden;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Space Grotesk', system-ui, sans-serif;
+  }
+
+  /* ═══ Aurora Orbs — dark mode only ═══ */
+  .dark body::before,
+  .dark body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+    will-change: transform;
+  }
+
+  /* Cobalt Blue orb — top-left */
+  .dark body::before {
+    width: 600px;
+    height: 600px;
+    top: -10%;
+    left: -10%;
+    background: hsla(220, 90%, 55%, 0.25);
+    filter: blur(150px);
+  }
+
+  /* Amethyst Purple orb — bottom-right */
+  .dark body::after {
+    width: 500px;
+    height: 500px;
+    bottom: -10%;
+    right: -10%;
+    background: hsla(270, 80%, 55%, 0.20);
+    filter: blur(150px);
   }
 }
 
@@ -128,4 +161,107 @@
     transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* ═══ Glassmorphism — Frosted Glass ═══ */
+  .frosted-glass {
+    @apply backdrop-blur-xl border rounded-2xl;
+    background: hsl(var(--card) / 0.6);
+    border-color: hsl(var(--border) / 0.5);
+  }
+  .dark .frosted-glass {
+    background: hsla(0, 0%, 100%, 0.05);
+    border-color: hsla(0, 0%, 100%, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  /* ═══ Glass Card — for cards & containers ═══ */
+  .glass-card {
+    @apply rounded-2xl border;
+    background: hsl(var(--card) / 0.8);
+    border-color: hsl(var(--border) / 0.5);
+  }
+  .dark .glass-card {
+    background: hsla(0, 0%, 100%, 0.05);
+    border-color: hsla(0, 0%, 100%, 0.08);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  /* ═══ Glass Surface — for sidebars, headers ═══ */
+  .glass-surface {
+    background: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .dark .glass-surface {
+    background: hsla(0, 0%, 0%, 0.6);
+    border-color: hsla(0, 0%, 100%, 0.06);
+  }
+
+  .privacy-blur {
+    filter: blur(8px);
+    user-select: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* ═══ Haptic Press — scale feedback on tap ═══ */
+  .haptic-press {
+    @apply transition-transform duration-75;
+  }
+  .haptic-press:active {
+    transform: scale(0.97);
+  }
+
+  /* ═══ Glow Card — Neon highlight for featured items ═══ */
+  .glow-card {
+    box-shadow: 0 0 60px -10px hsl(var(--primary) / 0.35);
+  }
 }
+
+/* ═══ Stagger Animations ═══ */
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.stagger-child {
+  animation: stagger-in 0.35s ease-out both;
+}
+
+/* Stagger container — children animate in cascade */
+.stagger-container > * {
+  animation: stagger-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.stagger-container > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-container > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-container > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-container > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-container > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-container > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-container > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-container > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-container > *:nth-child(9) { animation-delay: 400ms; }
+.stagger-container > *:nth-child(10) { animation-delay: 450ms; }
+.stagger-container > *:nth-child(11) { animation-delay: 500ms; }
+.stagger-container > *:nth-child(12) { animation-delay: 550ms; }
+.stagger-container > *:nth-child(13) { animation-delay: 600ms; }
+.stagger-container > *:nth-child(14) { animation-delay: 650ms; }
+.stagger-container > *:nth-child(15) { animation-delay: 700ms; }
+.stagger-container > *:nth-child(16) { animation-delay: 750ms; }
+.stagger-container > *:nth-child(17) { animation-delay: 800ms; }
+.stagger-container > *:nth-child(18) { animation-delay: 850ms; }
+.stagger-container > *:nth-child(19) { animation-delay: 900ms; }
+.stagger-container > *:nth-child(20) { animation-delay: 950ms; }

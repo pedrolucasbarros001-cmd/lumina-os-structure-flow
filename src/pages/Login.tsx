@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,19 +11,23 @@ import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const { t } = useTranslation();
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, user } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Reactive redirect: once onAuthStateChange sets user, re-render triggers this
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signIn(email, password);
-      navigate('/');
+      // No navigate here — onAuthStateChange will set user, triggering re-render + redirect above
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {

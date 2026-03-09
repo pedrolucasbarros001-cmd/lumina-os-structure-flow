@@ -1,577 +1,583 @@
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { format, addDays, isSameDay } from 'date-fns';
-import { pt } from 'date-fns/locale';
-import {
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    MapPin,
-    CheckCircle,
-    Home,
-    Store,
-    Calendar as CalendarIcon,
-    User,
-    ArrowRight,
-    Instagram,
-    MessageCircle,
-    Info
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { useState, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
+import { MapPin, Star, Clock, Check, Building2, Car, ChevronLeft, User, Mail, Phone, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { usePublicUnit } from '@/hooks/usePublicUnit';
+import { supabase } from '@/integrations/supabase/client';
+import { addDays, format, isSameDay } from 'date-fns';
+import { pt } from 'date-fns/locale';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
-type Step = 'service' | 'professional' | 'datetime' | 'confirm' | 'success';
+type ServiceItem = { id: string; name: string; duration: number; price: number; is_home_service: boolean };
 
-interface UnitData {
-    id: string;
-    name: string;
-    cover_image_url?: string | null;
-    logo_url?: string | null;
-    description?: string | null;
-    address?: string | null;
-    phone?: string | null;
-    accepts_home_visits?: boolean;
-    slug: string;
-    business_hours?: any;
-    instagram_url?: string | null;
-    whatsapp?: string | null;
-}
-
-interface ServiceData {
-    id: string;
-    name: string;
-    price: number;
-    duration_minutes: number;
-    description?: string;
-    allows_home?: boolean;
-    allows_unit?: boolean;
-}
-
-interface TeamMemberData {
-    id: string;
-    name: string;
-    photo_url?: string | null;
-    role?: string;
+// Haversine distance in km
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export default function PublicBooking() {
-    const { slug } = useParams<{ slug: string }>();
-    const navigate = useNavigate();
-    const [step, setStep] = useState<Step>('service');
-    const [unit, setUnit] = useState<UnitData | null>(null);
-    const [services, setServices] = useState<ServiceData[]>([]);
-    const [team, setTeam] = useState<TeamMemberData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  const { slug } = useParams<{ slug: string }>();
+  const { unit, services, team, mobility, isLoading } = usePublicUnit(slug);
 
-    // Selections
-    const [selectedService, setSelectedService] = useState<ServiceData | null>(null);
-    const [selectedPro, setSelectedPro] = useState<TeamMemberData | { id: '__any'; name: 'Qualquer Profissional' } | null>(null);
-    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-    const [selectedTime, setSelectedTime] = useState<string | null>(null);
-    const [clientName, setClientName] = useState('');
-    const [clientPhone, setClientPhone] = useState('');
-    const [isDelivery, setIsDelivery] = useState(false);
-    const [deliveryAddress, setDeliveryAddress] = useState('');
-    const [saving, setSaving] = useState(false);
-    const [weekOffset, setWeekOffset] = useState(0);
+  const [step, setStep] = useState(1);
+  const [logistics, setLogistics] = useState<'unit' | 'home' | null>(null);
+  const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
+  const [selectedPro, setSelectedPro] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientAddress, setClientAddress] = useState('');
+  const [clientLat, setClientLat] = useState<number>(0);
+  const [clientLng, setClientLng] = useState<number>(0);
+  const [distanceKm, setDistanceKm] = useState<number>(0);
+  const [travelFee, setTravelFee] = useState<number>(0);
+  const [addressError, setAddressError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [fetchingSlots, setFetchingSlots] = useState(false);
+  const [occupiedSlots, setOccupiedSlots] = useState<{ start: number, end: number }[]>([]);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
 
-    const [occupiedSlots, setOccupiedSlots] = useState<{ start: number, end: number }[]>([]);
-    const [fetchingSlots, setFetchingSlots] = useState(false);
+  const isHome = logistics === 'home';
+  const totalSteps = isHome ? 6 : 5;
 
-    useEffect(() => {
-        if (!slug) return;
-        (async () => {
-            try {
-                const { data: unitData, error: uErr } = await supabase
-                    .from('units')
-                    .select('*')
-                    .eq('slug', slug)
-                    .maybeSingle();
+  // Auto-skip step 1 if unit doesn't accept home visits
+  const effectiveStep = (!unit?.accepts_home_visits && step === 1) ? 2 : step;
 
-                if (uErr || !unitData) {
-                    setError('Página não encontrada ou URL inválida.');
-                    return;
-                }
-                setUnit(unitData as UnitData);
+  // Map step to logical step for home vs unit flows
+  // Unit: 1=Logistics, 2=Services, 3=Pro, 4=DateTime, 5=Confirmation
+  // Home: 1=Logistics, 2=Services, 3=Pro, 4=DateTime, 5=Address, 6=Confirmation
+  const getStepLabel = (s: number) => {
+    if (isHome) {
+      return ['Logística', 'Serviços', 'Profissional', 'Data & Hora', 'Morada', 'Confirmação'][s - 1];
+    }
+    return ['Logística', 'Serviços', 'Profissional', 'Data & Hora', 'Confirmação'][s - 1];
+  };
 
-                const { data: svcData } = await supabase
-                    .from('services')
-                    .select('*')
-                    .eq('unit_id', unitData.id)
-                    .eq('is_active', true)
-                    .order('name');
-                setServices((svcData || []) as ServiceData[]);
+  const subtotal = selectedServices.reduce((s, sv) => s + sv.price, 0);
+  const grandTotal = subtotal + (isHome ? travelFee : 0);
+  const totalDuration = selectedServices.reduce((s, sv) => s + sv.duration, 0);
 
-                const { data: teamData } = await supabase
-                    .from('team_members')
-                    .select('*')
-                    .eq('unit_id', unitData.id)
-                    .eq('is_active', true)
-                    .order('name');
-                setTeam((teamData || []) as TeamMemberData[]);
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [slug]);
+  // Fetch occupied slots when datetime step is reached
+  useEffect(() => {
+    if (!unit || effectiveStep !== 4 || !selectedDate) return;
+    (async () => {
+      setFetchingSlots(true);
+      try {
+        const startOfDay = new Date(selectedDate);
+        startOfDay.setHours(0, 0, 0, 0);
 
-    // Fetch occupied slots when datetime step is reached and specific date/pro is selected
-    useEffect(() => {
-        if (!unit || step !== 'datetime') return;
-        (async () => {
-            setFetchingSlots(true);
-            try {
-                const startOfDay = new Date(selectedDate);
-                startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(selectedDate);
+        endOfDay.setHours(23, 59, 59, 999);
 
-                const endOfDay = new Date(selectedDate);
-                endOfDay.setHours(23, 59, 59, 999);
+        let query = supabase
+          .from('appointments')
+          .select('datetime, duration_minutes')
+          .eq('unit_id', unit.id)
+          .in('status', ['pending_approval', 'confirmed', 'in_transit', 'arrived'])
+          .gte('datetime', startOfDay.toISOString())
+          .lte('datetime', endOfDay.toISOString());
 
-                let query = supabase
-                    .from('appointments')
-                    .select('datetime, duration_minutes')
-                    .eq('unit_id', unit.id)
-                    .in('status', ['pending_approval', 'confirmed', 'in_transit', 'arrived']) // exclude cancelled or completed history if they don't block
-                    .gte('datetime', startOfDay.toISOString())
-                    .lte('datetime', endOfDay.toISOString());
-
-                if (selectedPro && 'id' in selectedPro && selectedPro.id !== '__any') {
-                    query = query.eq('team_member_id', selectedPro.id);
-                }
-
-                const { data, error } = await query;
-                if (!error && data) {
-                    const slots = data.map(appt => {
-                        const d = new Date(appt.datetime);
-                        const start = d.getHours() * 60 + d.getMinutes();
-                        const dur = appt.duration_minutes || 60;
-                        return { start, end: start + dur };
-                    });
-                    setOccupiedSlots(slots);
-                }
-            } finally {
-                setFetchingSlots(false);
-            }
-        })();
-    }, [unit, selectedDate, selectedPro, step]);
-
-    const handleBook = async () => {
-        if (!unit || !selectedService || !selectedDate || !selectedTime || !clientName) return;
-        setSaving(true);
-        try {
-            const [h, m] = selectedTime.split(':').map(Number);
-            const dt = new Date(selectedDate);
-            dt.setHours(h, m, 0, 0);
-
-            await supabase.from('appointments').insert({
-                unit_id: unit.id,
-                client_name: clientName,
-                client_phone: clientPhone || null,
-                datetime: dt.toISOString(),
-                status: 'pending_approval',
-                value: selectedService.price,
-                type: isDelivery ? 'home' : 'in_person',
-                address: isDelivery ? deliveryAddress : null,
-                service_ids: [selectedService.id],
-                team_member_id: selectedPro && 'id' in selectedPro && selectedPro.id !== '__any' ? selectedPro.id : null,
-                duration_minutes: selectedService.duration_minutes || 60,
-            });
-            setStep('success');
-        } finally {
-            setSaving(false);
+        if (selectedPro && selectedPro !== 'any') {
+          query = query.eq('team_member_id', selectedPro);
         }
-    };
 
-    const STEPS: Step[] = ['service', 'professional', 'datetime', 'confirm'];
-    const currentIdx = STEPS.indexOf(step);
-
-    const canBack = currentIdx > 0;
-    const canNext = () => {
-        if (step === 'service') return !!selectedService;
-        if (step === 'professional') return !!selectedPro;
-        if (step === 'datetime') return !!selectedDate && !!selectedTime;
-        return true;
-    };
-
-    const goNext = () => {
-        if (canNext()) {
-            const next = STEPS[currentIdx + 1];
-            if (next) setStep(next);
+        const { data, error } = await query;
+        if (!error && data) {
+          const slots = data.map(appt => {
+            const d = new Date(appt.datetime);
+            const start = d.getHours() * 60 + d.getMinutes();
+            const dur = appt.duration_minutes || 60;
+            return { start, end: start + dur };
+          });
+          setOccupiedSlots(slots);
         }
-    };
+      } finally {
+        setFetchingSlots(false);
+      }
+    })();
+  }, [unit, selectedDate, selectedPro, effectiveStep]);
 
-    const goBack = () => {
-        const prev = STEPS[currentIdx - 1];
-        if (prev) setStep(prev);
-    };
+  const filteredServices = useMemo(() => {
+    if (!services) return [];
+    if (logistics === 'home') return services.filter(s => s.is_home_service);
+    return services;
+  }, [services, logistics]);
 
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(new Date(), weekOffset * 7 + i));
+  const filteredTeam = useMemo(() => {
+    if (!team || selectedServices.length === 0) return team;
+    const serviceIds = selectedServices.map(s => s.id);
+    return team.filter(m => {
+      const memberServiceIds = (m.team_member_services || []).map((ts: any) => ts.service_id);
+      return serviceIds.every(sid => memberServiceIds.includes(sid));
+    });
+  }, [team, selectedServices]);
 
-    if (loading) return (
-        <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center gap-4">
-            <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-            <p className="text-zinc-500 font-medium animate-pulse">Carregando experiência...</p>
-        </div>
+  const days = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < 14; i++) result.push(addDays(new Date(), i));
+    return result;
+  }, []);
+
+  const timeSlots = useMemo(() => {
+    if (!unit?.business_hours || !selectedDate) return [];
+    const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    const dayKey = dayKeys[selectedDate.getDay()];
+    const hours = (unit.business_hours as any)?.[dayKey];
+    if (!hours?.open) return [];
+
+    const slots: string[] = [];
+    const [startH, startM] = hours.start.split(':').map(Number);
+    const [endH, endM] = hours.end.split(':').map(Number);
+    let current = startH * 60 + startM;
+    const end = endH * 60 + endM;
+
+    const isTodaySelected = isSameDay(selectedDate, new Date());
+    const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+
+    while (current + totalDuration <= end) {
+      if (isTodaySelected && current <= nowMins) {
+        current += 30;
+        continue;
+      }
+      const slotEnd = current + totalDuration;
+      const overlaps = occupiedSlots.some(occ => current < occ.end && slotEnd > occ.start);
+      if (!overlaps) {
+        slots.push(`${String(Math.floor(current / 60)).padStart(2, '0')}:${String(current % 60).padStart(2, '0')}`);
+      }
+      current += 30;
+    }
+    return slots;
+  }, [unit, selectedDate, totalDuration, occupiedSlots]);
+
+  const toggleService = (s: any) => {
+    setSelectedServices(prev =>
+      prev.find(x => x.id === s.id)
+        ? prev.filter(x => x.id !== s.id)
+        : [...prev, { id: s.id, name: s.name, duration: s.duration, price: Number(s.price), is_home_service: s.is_home_service }]
     );
+  };
 
-    if (error || !unit) return (
-        <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-20 h-20 rounded-full bg-zinc-900 flex items-center justify-center mb-6">
-                <Info className="w-10 h-10 text-zinc-700" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Ops!</h2>
-            <p className="text-zinc-500 mb-8 max-w-xs">{error || 'Este negócio ainda não configurou sua página pública.'}</p>
-            <Button onClick={() => navigate('/')} variant="outline" className="rounded-2xl border-zinc-800 text-zinc-400">Voltar ao Início</Button>
-        </div>
-    );
+  const handleAddressSelect = (result: { address: string; lat: number; lng: number }) => {
+    setClientAddress(result.address);
+    setClientLat(result.lat);
+    setClientLng(result.lng);
+    setAddressError('');
 
-    if (step === 'success') return (
-        <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-8 animate-in fade-in duration-700">
-            <div className="relative mb-8">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center relative z-10 shadow-2xl shadow-primary/40">
-                    <CheckCircle className="w-12 h-12 text-white" />
-                </div>
-            </div>
+    if (unit?.latitude && unit?.longitude && result.lat !== 0) {
+      const dist = haversineKm(Number(unit.latitude), Number(unit.longitude), result.lat, result.lng);
+      setDistanceKm(Math.round(dist * 10) / 10);
 
-            <div className="text-center mb-8 relative z-10">
-                <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">SOLICITADO!</h2>
-                <p className="text-zinc-400 max-w-xs mx-auto">Tudo pronto! <b>{unit.name}</b> recebeu o seu agendamento e vai confirmar em breve.</p>
-            </div>
+      if (unit.coverage_radius_km && dist > Number(unit.coverage_radius_km)) {
+        setAddressError('Fora da zona de cobertura');
+        setTravelFee(0);
+        return;
+      }
 
-            <div className="w-full max-w-sm bg-zinc-900/50 border border-zinc-800 rounded-3xl p-6 space-y-4 mb-8">
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-zinc-500 uppercase font-black tracking-widest text-[10px]">Serviço</span>
-                    <span className="text-white font-bold">{selectedService?.name}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-zinc-500 uppercase font-black tracking-widest text-[10px]">Data</span>
-                    <span className="text-white font-bold">{format(selectedDate, "d MMMM", { locale: pt })}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                    <span className="text-zinc-500 uppercase font-black tracking-widest text-[10px]">Horário</span>
-                    <span className="text-primary font-black">{selectedTime}</span>
-                </div>
-                <div className="pt-4 border-t border-zinc-800 flex justify-between items-baseline">
-                    <span className="text-zinc-500 uppercase font-black tracking-widest text-[10px]">Total</span>
-                    <span className="text-2xl font-black text-white">€{selectedService?.price.toFixed(2)}</span>
-                </div>
-            </div>
+      if (mobility) {
+        const fee = Number(mobility.base_fee) + dist * Number(mobility.price_per_km);
+        setTravelFee(Math.round(fee * 100) / 100);
+      }
+    }
+  };
 
-            <Button onClick={() => setStep('service')} className="w-full max-w-sm h-14 rounded-2xl bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800 transition-all font-bold">
-                Fazer outro agendamento
-            </Button>
-        </div>
-    );
+  const canAdvance = () => {
+    switch (effectiveStep) {
+      case 1: return !!logistics;
+      case 2: return selectedServices.length > 0;
+      case 3: return !!selectedPro;
+      case 4: return !!selectedDate && !!selectedTime;
+      case 5:
+        if (isHome) return clientAddress.trim().length > 0 && !addressError;
+        return clientName.trim().length > 0;
+      case 6: return clientName.trim().length > 0;
+      default: return false;
+    }
+  };
 
+  const handleNext = () => {
+    const confirmStep = isHome ? 6 : 5;
+    if (effectiveStep === confirmStep) return handleSubmit();
+    setStep(s => s + 1);
+  };
+
+  const handleBack = () => {
+    if (effectiveStep <= 1) return;
+    setStep(s => s - 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!unit) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const datetime = `${format(selectedDate!, 'yyyy-MM-dd')}T${selectedTime}:00`;
+      const { error: insertError } = await supabase.from('appointments').insert({
+        unit_id: unit.id,
+        service_ids: selectedServices.map(s => s.id),
+        team_member_id: selectedPro === 'any' ? null : selectedPro,
+        datetime,
+        duration: totalDuration,
+        value: subtotal,
+        type: isHome ? 'home' : 'unit',
+        client_name: clientName,
+        client_email: clientEmail || null,
+        client_phone: clientPhone || null,
+        address: isHome ? clientAddress : null,
+        displacement_fee: isHome ? travelFee : 0,
+        distance_km: isHome ? distanceKm : null,
+        status: 'pending_approval',
+        payment_status: 'unpaid',
+      });
+      if (insertError) throw insertError;
+      setSuccess(true);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || 'Ocorreu um erro ao agendar. Tente novamente.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
     return (
-        <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans selection:bg-primary/30">
-            {/* BRANDING */}
-            <header className="relative shrink-0 overflow-hidden">
-                <div className="h-64 relative group">
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-[#09090b]/40 to-transparent z-10" />
-                    {unit.cover_image_url ? (
-                        <img src={unit.cover_image_url} alt="cover" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                    ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-950 flex items-center justify-center">
-                            <span className="text-9xl font-black text-white/5 tracking-tighter select-none">{unit.name[0]}</span>
-                        </div>
-                    )}
-                </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-                <div className="absolute top-4 right-4 z-20 flex gap-2">
-                    {unit.instagram_url && (
-                        <a href={unit.instagram_url} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-primary transition-colors">
-                            <Instagram className="w-5 h-5" />
-                        </a>
-                    )}
-                    {unit.whatsapp && (
-                        <a href={`https://wa.me/${unit.whatsapp}`} target="_blank" rel="noreferrer" className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-primary transition-colors">
-                            <MessageCircle className="w-5 h-5" />
-                        </a>
-                    )}
-                </div>
+  if (!unit) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-2 text-muted-foreground">
+        <Building2 className="w-12 h-12 opacity-40" />
+        <p>Página não encontrada</p>
+      </div>
+    );
+  }
 
-                <div className="px-6 -mt-20 relative z-20 space-y-4">
-                    <div className="flex items-end gap-4">
-                        <div className="w-24 h-24 rounded-[2rem] bg-zinc-950 border-4 border-[#09090b] shadow-2xl overflow-hidden flex items-center justify-center text-primary font-black text-4xl">
-                            {unit.logo_url ? (
-                                <img src={unit.logo_url} alt="logo" className="w-full h-full object-cover" />
-                            ) : (
-                                <span>{unit.name[0]}</span>
-                            )}
-                        </div>
-                        <div className="pb-2">
-                            <h1 className="text-3xl font-black tracking-tighter leading-none mb-2">{unit.name.toUpperCase()}</h1>
-                            <div className="flex items-center gap-2">
-                                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black text-emerald-500 uppercase tracking-widest">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    Aberto Agora
-                                </div>
-                                {unit.address && (
-                                    <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-bold uppercase tracking-wider truncate max-w-[150px]">
-                                        <MapPin className="w-3 h-3 text-primary" />
-                                        {unit.address}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+  if (success) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
+          <Check className="w-10 h-10 text-emerald-400" />
+        </div>
+        <h2 className="text-xl font-bold">Agendamento Confirmado!</h2>
+        <p className="text-sm text-muted-foreground text-center max-w-xs">
+          Receberá uma confirmação em breve. Obrigado por agendar connosco.
+        </p>
+      </div>
+    );
+  }
 
-            {/* PROGRESS STEPPER */}
-            <div className="px-6 py-6 sticky top-0 bg-[#09090b]/80 backdrop-blur-xl z-30 border-b border-zinc-900/50">
-                <div className="flex items-center gap-2 mb-4">
-                    {STEPS.map((s, i) => (
-                        <div key={s} className={cn(
-                            'h-1.5 rounded-full transition-all duration-500',
-                            i < currentIdx ? 'bg-primary flex-[2]' : i === currentIdx ? 'bg-primary flex-[3]' : 'bg-zinc-800 flex-1'
-                        )} />
-                    ))}
+  const isConfirmStep = effectiveStep === (isHome ? 6 : 5);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* ── STATIC HEADER ── */}
+      <div className="relative h-[35vh] min-h-[200px] shrink-0 overflow-hidden">
+        {unit.cover_url ? (
+          <img src={unit.cover_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/60 to-accent/60" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <div className="absolute bottom-4 left-4 right-4">
+          {unit.logo_url && (
+            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-background mb-2 bg-background">
+              <img src={unit.logo_url} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
+          <h1 className="text-xl font-bold">{unit.name}</h1>
+          <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+            {unit.address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {unit.address}</span>}
+            <span className="flex items-center gap-1"><Star className="w-3 h-3 fill-amber-400 text-amber-400" /> 5.0</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ── MAGIC CONTAINER ── */}
+      <div className="flex-1 px-4 py-5 overflow-y-auto pb-32">
+        {/* Step indicator */}
+        <div className="flex items-center gap-1 mb-5">
+          {effectiveStep > 1 && (
+            <button onClick={handleBack} className="mr-2 p-1 rounded-lg hover:bg-muted transition-colors">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+          <span className="text-xs text-muted-foreground uppercase tracking-widest">
+            Passo {effectiveStep} de {totalSteps} — {getStepLabel(effectiveStep)}
+          </span>
+        </div>
+
+        {/* ── Step 1: Logística ── */}
+        {effectiveStep === 1 && (
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { key: 'unit' as const, icon: Building2, label: 'Você vem até nós', sub: 'No estabelecimento' },
+              { key: 'home' as const, icon: Car, label: 'Nós vamos até si', sub: 'Serviço ao domicílio' },
+            ].map((opt, i) => (
+              <button
+                key={opt.key}
+                onClick={() => setLogistics(opt.key)}
+                className={cn(
+                  'stagger-child flex flex-col items-center gap-3 p-6 rounded-3xl border-2 transition-all text-center',
+                  logistics === opt.key ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-border/50 bg-card hover:border-primary/30'
+                )}
+                style={{ animationDelay: `${i * 50}ms` }}
+              >
+                <opt.icon className={cn('w-8 h-8', logistics === opt.key ? 'text-primary' : 'text-muted-foreground')} />
+                <div>
+                  <p className="font-semibold text-sm">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{opt.sub}</p>
                 </div>
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-black uppercase tracking-tighter text-white">
-                        {step === 'service' && 'Escolha o Serviço'}
-                        {step === 'professional' && 'Profissional'}
-                        {step === 'datetime' && 'Data e Horário'}
-                        {step === 'confirm' && 'Seus Dados'}
-                    </h2>
-                    <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">Passo {currentIdx + 1}/{STEPS.length}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Step 2: Serviços ── */}
+        {effectiveStep === 2 && (
+          <div className="space-y-2">
+            {filteredServices.map((s, i) => {
+              const isSelected = selectedServices.some(x => x.id === s.id);
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => toggleService(s as ServiceItem)}
+                  className={cn(
+                    'stagger-child w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all text-left',
+                    isSelected ? 'border-emerald-500/60 bg-emerald-500/10 scale-[1.01]' : 'border-border/50 bg-card hover:border-primary/30'
+                  )}
+                  style={{ animationDelay: `${i * 50}ms` }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{s.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {s.duration} min
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-bold text-sm">€{Number(s.price).toFixed(0)}</span>
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                        <Check className="w-3 h-3 text-white" />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Step 3: Profissional ── */}
+        {effectiveStep === 3 && (
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => setSelectedPro('any')}
+              className={cn(
+                'stagger-child flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all',
+                selectedPro === 'any' ? 'border-primary bg-primary/5' : 'border-border/50 bg-card'
+              )}
+              style={{ animationDelay: '0ms' }}
+            >
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-xl">✨</div>
+              <p className="text-xs font-medium">Qualquer</p>
+            </button>
+            {filteredTeam.map((m, i) => (
+              <button
+                key={m.id}
+                onClick={() => setSelectedPro(m.id)}
+                className={cn(
+                  'stagger-child flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all',
+                  selectedPro === m.id ? 'border-primary bg-primary/5' : 'border-border/50 bg-card'
+                )}
+                style={{ animationDelay: `${(i + 1) * 50}ms` }}
+              >
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center font-bold text-primary-foreground overflow-hidden">
+                  {m.photo_url ? <img src={m.photo_url} alt="" className="w-full h-full object-cover" /> : m.name.charAt(0)}
                 </div>
+                <p className="text-xs font-medium text-center leading-tight">{m.name.split(' ')[0]}</p>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* ── Step 4: Data & Hora ── */}
+        {effectiveStep === 4 && (
+          <div className="space-y-5">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+              {days.map((d, i) => {
+                const isSelected = selectedDate && isSameDay(d, selectedDate);
+                return (
+                  <button
+                    key={i}
+                    onClick={() => { setSelectedDate(d); setSelectedTime(null); }}
+                    className={cn(
+                      'stagger-child flex-shrink-0 flex flex-col items-center gap-1 w-14 py-3 rounded-2xl border-2 transition-all',
+                      isSelected ? 'border-primary bg-primary/10' : 'border-border/50 bg-card'
+                    )}
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    <span className="text-[10px] uppercase text-muted-foreground">{format(d, 'EEE', { locale: pt })}</span>
+                    <span className={cn('text-lg font-bold', isSelected && 'text-primary')}>{format(d, 'd')}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* STEP CONTENT */}
-            <main className="flex-1 px-6 py-8 pb-32">
-                {step === 'service' && (
-                    <div className="space-y-4 animate-in slide-in-from-bottom-4 duration-500">
-                        {services.map((s) => (
-                            <button
-                                key={s.id}
-                                onClick={() => setSelectedService(s)}
-                                className={cn(
-                                    'group relative w-full p-6 rounded-[2rem] border transition-all duration-300 transform active:scale-[0.98]',
-                                    selectedService?.id === s.id
-                                        ? 'bg-zinc-900 border-primary shadow-2xl shadow-primary/10'
-                                        : 'bg-zinc-900/40 border-zinc-800 hover:border-zinc-700'
-                                )}
-                            >
-                                <div className="flex justify-between items-start relative z-10">
-                                    <div className="text-left">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <p className="font-black text-lg tracking-tight uppercase leading-none">{s.name}</p>
-                                            {selectedService?.id === s.id && <CheckCircle className="w-4 h-4 text-primary" />}
-                                        </div>
-                                        <div className="flex items-center gap-4 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                                            <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-primary" /> {s.duration_minutes} MIN</span>
-                                            {s.allows_home && <span className="flex items-center gap-1 text-accent"><Home className="w-3 h-3" /> Domicílio</span>}
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col items-end">
-                                        <p className="text-2xl font-black group-hover:text-primary transition-colors tracking-tighter">€{s.price.toFixed(0)}<span className="text-sm">.{(s.price % 1).toFixed(2).slice(2)}</span></p>
-                                    </div>
-                                </div>
-                            </button>
-                        ))}
-
-                        {unit.accepts_home_visits && selectedService?.allows_home && (
-                            <div className="mt-8 p-6 bg-accent/5 border border-accent/20 rounded-[2.5rem] relative overflow-hidden group">
-                                <div className="flex items-center justify-between relative z-10">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center text-accent">
-                                            <Home className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <p className="font-black text-sm uppercase tracking-tight">Atendimento ao Domicílio?</p>
-                                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Nós vamos até você</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsDelivery(!isDelivery)}
-                                        className={cn(
-                                            'w-14 h-8 rounded-full relative transition-all duration-300 p-1',
-                                            isDelivery ? 'bg-accent' : 'bg-zinc-800'
-                                        )}
-                                    >
-                                        <div className={cn('w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md', isDelivery ? 'translate-x-6' : 'translate-x-0')} />
-                                    </button>
-                                </div>
-                                {isDelivery && (
-                                    <div className="mt-6 animate-in slide-in-from-top-2 duration-300">
-                                        <input
-                                            value={deliveryAddress}
-                                            onChange={(e) => setDeliveryAddress(e.target.value)}
-                                            placeholder="A sua morada completa..."
-                                            className="w-full bg-zinc-950 border border-accent/30 rounded-2xl px-4 py-4 text-sm outline-none focus:border-accent text-white"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+            {selectedDate && (
+              <div className="grid grid-cols-4 gap-2">
+                {timeSlots.length === 0 && (
+                  <p className="col-span-4 text-center text-sm text-muted-foreground py-6">Sem horários disponíveis neste dia.</p>
                 )}
-
-                {step === 'professional' && (
-                    <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-bottom-4 duration-500">
-                        <button
-                            onClick={() => setSelectedPro({ id: '__any', name: 'Qualquer Profissional' })}
-                            className={cn(
-                                'col-span-2 p-6 rounded-[2.5rem] border transition-all duration-300 flex items-center gap-4',
-                                selectedPro?.id === '__any' ? 'bg-zinc-900 border-primary shadow-2xl shadow-primary/10' : 'bg-zinc-900/40 border-zinc-800'
-                            )}
-                        >
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-2xl shadow-lg">✨</div>
-                            <div className="text-left">
-                                <p className="font-black text-lg uppercase tracking-tight">Qualquer Profissional</p>
-                                <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest mt-1">Próxima disponibilidade</p>
-                            </div>
-                        </button>
-
-                        {team.map((m) => (
-                            <button
-                                key={m.id}
-                                onClick={() => setSelectedPro(m)}
-                                className={cn(
-                                    'p-6 rounded-[2.5rem] border transition-all duration-300 flex flex-col items-center gap-4 text-center active:scale-95',
-                                    selectedPro?.id === m.id ? 'bg-zinc-900 border-primary shadow-2xl shadow-primary/10' : 'bg-zinc-900/40 border-zinc-800'
-                                )}
-                            >
-                                <div className="w-20 h-20 rounded-[2rem] bg-zinc-800 p-0.5 overflow-hidden">
-                                    {m.photo_url ? (
-                                        <img src={m.photo_url} alt={m.name} className="w-full h-full object-cover rounded-[1.8rem]" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-3xl font-black text-zinc-700 bg-zinc-900">{m.name[0]}</div>
-                                    )}
-                                </div>
-                                <p className="font-black text-sm uppercase tracking-tight truncate w-full">{m.name}</p>
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {step === 'datetime' && (
-                    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm font-black text-white uppercase tracking-tighter">{format(weekDays[0], 'MMMM yyyy', { locale: pt })}</p>
-                                <div className="flex gap-2">
-                                    <button onClick={() => setWeekOffset(w => Math.max(0, w - 1))} className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center disabled:opacity-20"><ChevronLeft className="w-5 h-5" /></button>
-                                    <button onClick={() => setWeekOffset(w => w + 1)} className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center"><ChevronRight className="w-5 h-5" /></button>
-                                </div>
-                            </div>
-                            <div className="flex justify-between gap-2 overflow-x-auto pb-2 no-scrollbar">
-                                {weekDays.map((d) => (
-                                    <button
-                                        key={d.toISOString()}
-                                        onClick={() => { setSelectedDate(d); setSelectedTime(null); }}
-                                        className={cn(
-                                            'min-w-[55px] flex flex-col items-center py-4 rounded-2xl border transition-all',
-                                            isSameDay(selectedDate, d) ? 'bg-primary border-primary text-white scale-105 shadow-xl shadow-primary/20' : 'bg-zinc-900/40 border-zinc-800 text-zinc-500'
-                                        )}
-                                    >
-                                        <span className="text-[9px] font-black uppercase tracking-widest mb-1">{format(d, 'EEE', { locale: pt })}</span>
-                                        <span className="text-lg font-black tracking-tighter">{format(d, 'd')}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-3 relative min-h-[100px]">
-                            {fetchingSlots && (
-                                <div className="absolute inset-0 bg-[#09090b]/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-                                    <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
-                                </div>
-                            )}
-
-                            {(() => {
-                                const ALL_TIMES = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '18:00'];
-                                const availableTimes = ALL_TIMES.filter(t => {
-                                    const [h, m] = t.split(':').map(Number);
-                                    const startMins = h * 60 + m;
-                                    const dur = selectedService?.duration_minutes || 60;
-                                    const endMins = startMins + dur;
-
-                                    if (isSameDay(selectedDate, new Date())) {
-                                        const now = new Date();
-                                        const nowMins = now.getHours() * 60 + now.getMinutes();
-                                        if (startMins <= nowMins) return false;
-                                    }
-
-                                    const overlaps = occupiedSlots.some(occ => startMins < occ.end && endMins > occ.start);
-                                    return !overlaps;
-                                });
-
-                                if (availableTimes.length === 0 && !fetchingSlots) {
-                                    return <div className="col-span-4 text-center py-8 text-zinc-500 font-bold text-sm">Nenhum horário disponível para este dia.</div>;
-                                }
-
-                                return availableTimes.map((t) => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setSelectedTime(t)}
-                                        className={cn(
-                                            'py-4 rounded-2xl border text-xs font-black tracking-tight transition-all',
-                                            selectedTime === t ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'
-                                        )}
-                                    >
-                                        {t}
-                                    </button>
-                                ));
-                            })()}
-                        </div>
-                    </div>
-                )}
-
-                {step === 'confirm' && (
-                    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-[2.5rem] space-y-4">
-                            <h3 className="text-zinc-600 font-black uppercase tracking-[0.2em] text-[10px]">Resumo do Pedido</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between"><span className="text-zinc-500 text-xs">Serviço:</span><span className="font-black text-sm uppercase">{selectedService?.name}</span></div>
-                                <div className="flex items-center justify-between"><span className="text-zinc-500 text-xs">Data:</span><span className="font-black text-sm uppercase">{format(selectedDate, "d 'de' MMMM", { locale: pt })}</span></div>
-                                <div className="flex items-center justify-between"><span className="text-zinc-500 text-xs">Horário:</span><span className="font-black text-sm text-primary uppercase">{selectedTime}</span></div>
-                                <div className="flex items-center justify-between pt-2 border-t border-zinc-800"><span className="text-zinc-500 text-xs font-black">TOTAL:</span><span className="font-black text-xl text-white">€{selectedService?.price.toFixed(2)}</span></div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-6">
-                            <input
-                                required
-                                value={clientName}
-                                onChange={(e) => setClientName(e.target.value)}
-                                placeholder="O seu nome completo..."
-                                className="w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl px-5 py-5 text-sm outline-none focus:border-primary text-white"
-                            />
-                            <input
-                                value={clientPhone}
-                                onChange={(e) => setClientPhone(e.target.value)}
-                                placeholder="Seu telemóvel / whatsapp..."
-                                className="w-full bg-zinc-900/40 border border-zinc-800 rounded-2xl px-5 py-5 text-sm outline-none focus:border-primary text-white"
-                            />
-                        </div>
-                    </div>
-                )}
-            </main>
-
-            <footer className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#09090b] to-transparent z-40">
-                <div className="max-w-screen-md mx-auto flex gap-3">
-                    {canBack && (
-                        <button onClick={goBack} className="w-14 h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400"><ChevronLeft className="w-6 h-6" /></button>
+                {timeSlots.map((t, i) => (
+                  <button
+                    key={t}
+                    onClick={() => setSelectedTime(t)}
+                    className={cn(
+                      'stagger-child py-2.5 rounded-xl text-sm font-medium border-2 transition-all',
+                      selectedTime === t ? 'border-emerald-500 bg-emerald-500/15 text-emerald-400' : 'border-border/50 bg-card hover:border-primary/30'
                     )}
-                    <button
-                        onClick={step === 'confirm' ? handleBook : goNext}
-                        disabled={!canNext() || (step === 'confirm' && (!clientName || saving))}
-                        className={cn(
-                            'flex-1 h-14 rounded-2xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 transition-all',
-                            canNext() ? 'bg-primary text-white shadow-2xl shadow-primary/30' : 'bg-zinc-900 text-zinc-700 border border-zinc-800 opacity-50'
-                        )}
-                    >
-                        {step === 'confirm' ? (saving ? 'Enviando...' : 'Finalizar Agendamento') : 'Continuar'} <ArrowRight className="w-4 h-4" />
-                    </button>
+                    style={{ animationDelay: `${i * 30}ms` }}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Step 5 (Home): Morada ── */}
+        {effectiveStep === 5 && isHome && (
+          <div className="space-y-4">
+            <AddressAutocomplete
+              onSelect={handleAddressSelect}
+              defaultValue={clientAddress}
+              placeholder="Rua, nº, cidade..."
+            />
+
+            {addressError && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
+                {addressError}
+              </div>
+            )}
+
+            {distanceKm > 0 && !addressError && (
+              <div className="frosted-glass p-4 space-y-2 rounded-2xl">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Distância</span>
+                  <span className="font-medium">{distanceKm} km</span>
                 </div>
-            </footer>
+                {travelFee > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Taxa de deslocação</span>
+                    <span className="font-bold">€{travelFee.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Static map preview */}
+            {clientLat !== 0 && clientLng !== 0 && import.meta.env.VITE_GOOGLE_MAPS_KEY && (
+              <div className="rounded-2xl overflow-hidden border border-border/50">
+                <img
+                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${clientLat},${clientLng}&zoom=15&size=600x200&markers=color:red|${clientLat},${clientLng}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
+                  alt="Localização"
+                  className="w-full h-[150px] object-cover"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Confirmation Step ── */}
+        {isConfirmStep && (
+          <div className="space-y-5">
+            {/* Summary */}
+            <div className="frosted-glass p-4 space-y-2">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Resumo</h3>
+              {selectedServices.map(s => (
+                <div key={s.id} className="flex justify-between text-sm">
+                  <span>{s.name}</span>
+                  <span className="font-medium">€{s.price}</span>
+                </div>
+              ))}
+              {isHome && travelFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Taxa de deslocação ({distanceKm} km)</span>
+                  <span className="font-medium">€{travelFee.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="border-t border-border/50 pt-2 flex justify-between font-bold">
+                <span>Total</span>
+                <span>€{grandTotal.toFixed(2)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedDate && format(selectedDate, "EEEE, d 'de' MMMM", { locale: pt })} às {selectedTime} · {totalDuration} min
+              </p>
+              {isHome && clientAddress && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> {clientAddress}
+                </p>
+              )}
+            </div>
+
+            {/* Client fields */}
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><User className="w-3 h-3" /> Nome *</label>
+                <Input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="O seu nome" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><Mail className="w-3 h-3" /> Email</label>
+                <Input type="email" value={clientEmail} onChange={e => setClientEmail(e.target.value)} placeholder="email@exemplo.com" className="rounded-xl" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs text-muted-foreground flex items-center gap-1"><Phone className="w-3 h-3" /> Telemóvel</label>
+                <Input type="tel" value={clientPhone} onChange={e => setClientPhone(e.target.value)} placeholder="+351 912 345 678" className="rounded-xl" />
+              </div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="px-4 -mt-2 mb-2">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── STICKY FOOTER ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 backdrop-blur-[30px] bg-background/80 border-t border-border/50 px-4 py-3">
+        <div className="max-w-lg mx-auto flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Subtotal</p>
+            <p className="text-lg font-bold">€ {grandTotal.toFixed(2)}</p>
+          </div>
+          <Button
+            onClick={handleNext}
+            disabled={!canAdvance() || submitting}
+            className="h-12 px-8 rounded-2xl text-sm font-bold"
+          >
+            {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isConfirmStep ? 'Confirmar Agendamento' : 'Próximo'}
+          </Button>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

@@ -1,32 +1,41 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const plan = searchParams.get('plan') || 'monthly';
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const planLabel = plan === 'annual' ? 'Anual' : 'Mensal';
+  const planPrice = plan === 'annual' ? '€64,75/mês' : '€69/mês';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       await signUp(email, password, fullName);
-      toast({ title: 'Conta criada! 🎉', description: 'Vamos configurar a sua empresa.' });
-      navigate('/onboarding');
-
+      // Store pending plan for post-confirmation processing
+      localStorage.setItem('pending_plan', plan);
+      toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar.' });
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
@@ -36,7 +45,7 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border/50 shadow-xl">
+      <Card className="w-full max-w-md border-border/50 shadow-xl glass-card">
         <CardHeader className="text-center space-y-2">
           <div className="mx-auto mb-4">
             <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -45,6 +54,9 @@ export default function Signup() {
           </div>
           <CardTitle className="text-xl">{t('auth.signupTitle')}</CardTitle>
           <CardDescription>{t('auth.signupSubtitle')}</CardDescription>
+          <Badge variant="secondary" className="mx-auto mt-2">
+            Plano {planLabel} • {planPrice}
+          </Badge>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

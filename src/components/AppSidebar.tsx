@@ -4,6 +4,7 @@ import {
   Users,
   UserCog,
   ShoppingBag,
+  Receipt,
   Building2,
   Settings,
   LogOut,
@@ -13,6 +14,7 @@ import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
+import { CompanySwitcher } from '@/components/CompanySwitcher';
 import {
   Sidebar,
   SidebarContent,
@@ -33,8 +35,9 @@ const NAV_ITEMS = [
   { key: 'agenda', label: 'Agenda', path: '/agenda', icon: CalendarDays },
   { key: 'clients', label: 'Clientes', path: '/clients', icon: Users },
   { key: 'catalogo', label: 'Catálogo', path: '/catalogo', icon: ShoppingBag },
+  { key: 'vendas', label: 'Vendas', path: '/vendas', icon: Receipt },
   { key: 'team', label: 'Equipa', path: '/team', icon: UserCog },
-  { key: 'empresa', label: 'Minha Empresa', path: '/empresa', icon: Building2 },
+  { key: 'unit', label: 'A Minha Empresa', path: '/unit', icon: Building2 },
   { key: 'settings', label: 'Configurações', path: '/settings', icon: Settings },
 ];
 
@@ -52,17 +55,10 @@ export function AppSidebar() {
   });
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="glass-surface border-r border-border/30">
       <SidebarContent>
-        <div className="px-4 py-5">
-          {!collapsed && (
-            <h2 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              LUMINA OS
-            </h2>
-          )}
-          {collapsed && (
-            <span className="text-lg font-bold text-primary">L</span>
-          )}
+        <div className="px-3 py-4">
+          <CompanySwitcher collapsed={collapsed} />
         </div>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -73,7 +69,7 @@ export function AppSidebar() {
                     <NavLink
                       to={item.path}
                       end
-                      className="hover:bg-sidebar-accent/50 transition-smooth"
+                      className="hover:bg-sidebar-accent/50 transition-smooth haptic-press rounded-xl"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
                     >
                       <item.icon className="mr-2 h-4 w-4 shrink-0" />

@@ -82,6 +82,9 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.75rem",
       },
       keyframes: {
         "accordion-down": {
@@ -92,10 +95,26 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "shimmer": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+        "roll-up": {
+          "0%": { transform: "translateY(100%)", opacity: "0" },
+          "60%": { transform: "translateY(-5%)", opacity: "1" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "ring-fill": {
+          "0%": { strokeDashoffset: "var(--ring-circumference)" },
+          "100%": { strokeDashoffset: "var(--ring-target)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "shimmer": "shimmer 1.5s infinite",
+        "roll-up": "roll-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "ring-fill": "ring-fill 1.2s ease-out forwards",
       },
     },
   },

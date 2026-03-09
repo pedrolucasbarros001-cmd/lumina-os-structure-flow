@@ -1,480 +1,808 @@
 export type Json =
-    | string
-    | number
-    | boolean
-    | null
-    | { [key: string]: Json | undefined }
-    | Json[]
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
-export interface Database {
-    public: {
-        Tables: {
-            profiles: {
-                Row: {
-                    id: string
-                    full_name: string | null
-                    avatar_url: string | null
-                    language: string
-                    onboarding_completed: boolean
-                    onboarding_step: number
-                    setup_completed: boolean
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id: string
-                    full_name?: string | null
-                    avatar_url?: string | null
-                    language?: string
-                    onboarding_completed?: boolean
-                    onboarding_step?: number
-                    setup_completed?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    full_name?: string | null
-                    avatar_url?: string | null
-                    language?: string
-                    onboarding_completed?: boolean
-                    onboarding_step?: number
-                    setup_completed?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            units: {
-                Row: {
-                    id: string
-                    owner_id: string
-                    name: string
-                    logo_url: string | null
-                    cover_image_url: string | null
-                    address: string | null
-                    phone: string | null
-                    business_hours: Json
-                    accepts_home_visits: boolean
-                    is_published: boolean
-                    slug: string | null
-                    business_type: string | null
-                    logistics_type: string | null
-                    setup_completed: boolean
-                    lat: number | null
-                    lng: number | null
-                    created_at: string
-                    updated_at: string
-                    description: string | null
-                    instagram_url: string | null
-                    whatsapp: string | null
-                }
-                Insert: {
-                    id?: string
-                    owner_id: string
-                    name: string
-                    logo_url?: string | null
-                    cover_image_url?: string | null
-                    address?: string | null
-                    phone?: string | null
-                    business_hours?: Json
-                    accepts_home_visits?: boolean
-                    is_published?: boolean
-                    slug?: string | null
-                    business_type?: string | null
-                    logistics_type?: string | null
-                    setup_completed?: boolean
-                    lat?: number | null
-                    lng?: number | null
-                    created_at?: string
-                    updated_at?: string
-                    description?: string | null
-                    instagram_url?: string | null
-                    whatsapp?: string | null
-                }
-                Update: {
-                    id?: string
-                    owner_id?: string
-                    name?: string
-                    logo_url?: string | null
-                    cover_image_url?: string | null
-                    address?: string | null
-                    phone?: string | null
-                    business_hours?: Json
-                    accepts_home_visits?: boolean
-                    is_published?: boolean
-                    slug?: string | null
-                    business_type?: string | null
-                    logistics_type?: string | null
-                    setup_completed?: boolean
-                    lat?: number | null
-                    lng?: number | null
-                    created_at?: string
-                    updated_at?: string
-                    description?: string | null
-                    instagram_url?: string | null
-                    whatsapp?: string | null
-                }
-            }
-            services: {
-                Row: {
-                    id: string
-                    unit_id: string
-                    name: string
-                    duration: number
-                    duration_minutes: number
-                    price: number
-                    description: string | null
-                    image_url: string | null
-                    is_active: boolean
-                    allows_home: boolean
-                    allows_unit: boolean
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id?: string
-                    unit_id: string
-                    name: string
-                    duration?: number
-                    duration_minutes?: number
-                    price?: number
-                    description?: string | null
-                    image_url?: string | null
-                    is_active?: boolean
-                    allows_home?: boolean
-                    allows_unit?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    unit_id?: string
-                    name?: string
-                    duration?: number
-                    duration_minutes?: number
-                    price?: number
-                    description?: string | null
-                    image_url?: string | null
-                    is_active?: boolean
-                    allows_home?: boolean
-                    allows_unit?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            team_members: {
-                Row: {
-                    id: string
-                    user_id: string | null
-                    unit_id: string
-                    name: string
-                    photo_url: string | null
-                    role: string
-                    bio: string | null
-                    accepts_home_visits: boolean
-                    is_active: boolean
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id?: string
-                    user_id?: string | null
-                    unit_id: string
-                    name: string
-                    photo_url?: string | null
-                    role?: string
-                    bio?: string | null
-                    accepts_home_visits?: boolean
-                    is_active?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    user_id?: string | null
-                    unit_id?: string
-                    name?: string
-                    photo_url?: string | null
-                    role?: string
-                    bio?: string | null
-                    accepts_home_visits?: boolean
-                    is_active?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            clients: {
-                Row: {
-                    id: string
-                    unit_id: string
-                    name: string
-                    phone: string | null
-                    email: string | null
-                    notes: string | null
-                    preferences: string | null
-                    addresses: Json
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id?: string
-                    unit_id: string
-                    name: string
-                    phone?: string | null
-                    email?: string | null
-                    notes?: string | null
-                    preferences?: string | null
-                    addresses?: Json
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    unit_id?: string
-                    name?: string
-                    phone?: string | null
-                    email?: string | null
-                    notes?: string | null
-                    preferences?: string | null
-                    addresses?: Json
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            appointments: {
-                Row: {
-                    id: string
-                    unit_id: string
-                    client_id: string | null
-                    team_member_id: string | null
-                    service_ids: string[]
-                    datetime: string
-                    duration: number
-                    duration_minutes: number
-                    type: string
-                    status: string
-                    value: number
-                    address: string | null
-                    notes: string | null
-                    client_name: string | null
-                    client_phone: string | null
-                    client_email: string | null
-                    delivery_fee: number
-                    discount: number
-                    tip_amount: number
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id?: string
-                    unit_id: string
-                    client_id?: string | null
-                    team_member_id?: string | null
-                    service_ids?: string[]
-                    datetime: string
-                    duration?: number
-                    duration_minutes?: number
-                    type?: string
-                    status?: string
-                    value?: number
-                    address?: string | null
-                    notes?: string | null
-                    client_name?: string | null
-                    client_phone?: string | null
-                    client_email?: string | null
-                    delivery_fee?: number
-                    discount?: number
-                    tip_amount?: number
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    unit_id?: string
-                    client_id?: string | null
-                    team_member_id?: string | null
-                    service_ids?: string[]
-                    datetime?: string
-                    duration?: number
-                    duration_minutes?: number
-                    type?: string
-                    status?: string
-                    value?: number
-                    address?: string | null
-                    notes?: string | null
-                    client_name?: string | null
-                    client_phone?: string | null
-                    client_email?: string | null
-                    delivery_fee?: number
-                    discount?: number
-                    tip_amount?: number
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            products: {
-                Row: {
-                    id: string
-                    unit_id: string
-                    name: string
-                    price: number
-                    stock_quantity: number
-                    low_stock_threshold: number
-                    image_url: string | null
-                    brand: string | null
-                    category: string | null
-                    is_active: boolean
-                    created_at: string
-                    updated_at: string
-                }
-                Insert: {
-                    id?: string
-                    unit_id: string
-                    name: string
-                    price?: number
-                    stock_quantity?: number
-                    low_stock_threshold?: number
-                    image_url?: string | null
-                    brand?: string | null
-                    category?: string | null
-                    is_active?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-                Update: {
-                    id?: string
-                    unit_id?: string
-                    name?: string
-                    price?: number
-                    stock_quantity?: number
-                    low_stock_threshold?: number
-                    image_url?: string | null
-                    brand?: string | null
-                    category?: string | null
-                    is_active?: boolean
-                    created_at?: string
-                    updated_at?: string
-                }
-            }
-            client_photos: {
-                Row: {
-                    id: string
-                    client_id: string
-                    url: string
-                    description: string | null
-                    created_at: string
-                }
-                Insert: {
-                    id?: string
-                    client_id: string
-                    url: string
-                    description?: string | null
-                    created_at?: string
-                }
-                Update: {
-                    id?: string
-                    client_id?: string
-                    url?: string
-                    description?: string | null
-                    created_at?: string
-                }
-            }
+export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.1"
+  }
+  public: {
+    Tables: {
+      appointments: {
+        Row: {
+          address: string | null
+          amount_received: number | null
+          client_email: string | null
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          datetime: string
+          displacement_fee: number
+          distance_km: number | null
+          duration: number
+          id: string
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_status: string
+          service_ids: string[]
+          status: Database["public"]["Enums"]["appointment_status"]
+          team_member_id: string | null
+          type: Database["public"]["Enums"]["appointment_type"]
+          unit_id: string
+          updated_at: string
+          value: number
         }
-        Views: {
-            [_ in never]: never
+        Insert: {
+          address?: string | null
+          amount_received?: number | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          datetime: string
+          displacement_fee?: number
+          distance_km?: number | null
+          duration?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          service_ids?: string[]
+          status?: Database["public"]["Enums"]["appointment_status"]
+          team_member_id?: string | null
+          type?: Database["public"]["Enums"]["appointment_type"]
+          unit_id: string
+          updated_at?: string
+          value?: number
         }
-        Functions: {
-            [_ in never]: never
+        Update: {
+          address?: string | null
+          amount_received?: number | null
+          client_email?: string | null
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          datetime?: string
+          displacement_fee?: number
+          distance_km?: number | null
+          duration?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          service_ids?: string[]
+          status?: Database["public"]["Enums"]["appointment_status"]
+          team_member_id?: string | null
+          type?: Database["public"]["Enums"]["appointment_type"]
+          unit_id?: string
+          updated_at?: string
+          value?: number
         }
-        Enums: {
-            appointment_status: "pending_approval" | "confirmed" | "completed" | "cancelled" | "no_show" | "in_transit" | "arrived"
-            appointment_type: "unit" | "home"
-            app_role: "owner" | "team_member"
+        Relationships: [
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          unit_id: string
+          updated_at: string
         }
-        CompositeTypes: {
-            [_ in never]: never
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          unit_id: string
+          updated_at?: string
         }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_members: {
+        Row: {
+          commission_rate: number
+          company_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          commission_rate?: number
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          commission_rate?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      join_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requester_id: string
+          status: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requester_id: string
+          status?: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requester_id?: string
+          status?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "join_requests_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobility_settings: {
+        Row: {
+          base_fee: number
+          created_at: string
+          id: string
+          price_per_km: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_fee?: number
+          created_at?: string
+          id?: string
+          price_per_km?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_fee?: number
+          created_at?: string
+          id?: string
+          price_per_km?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobility_settings_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: true
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          agenda_tutorial_completed: boolean
+          avatar_url: string | null
+          business_type: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          invited_via: string | null
+          language: string
+          linked_unit_id: string | null
+          onboarding_completed: boolean
+          service_model: string | null
+          setup_completed: boolean
+          team_size: string | null
+          updated_at: string
+          user_type: string | null
+        }
+        Insert: {
+          agenda_tutorial_completed?: boolean
+          avatar_url?: string | null
+          business_type?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          invited_via?: string | null
+          language?: string
+          linked_unit_id?: string | null
+          onboarding_completed?: boolean
+          service_model?: string | null
+          setup_completed?: boolean
+          team_size?: string | null
+          updated_at?: string
+          user_type?: string | null
+        }
+        Update: {
+          agenda_tutorial_completed?: boolean
+          avatar_url?: string | null
+          business_type?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          invited_via?: string | null
+          language?: string
+          linked_unit_id?: string | null
+          onboarding_completed?: boolean
+          service_model?: string | null
+          setup_completed?: boolean
+          team_size?: string | null
+          updated_at?: string
+          user_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_linked_unit_id_fkey"
+            columns: ["linked_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration: number
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_home_service: boolean
+          is_presential: boolean
+          name: string
+          price: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_home_service?: boolean
+          is_presential?: boolean
+          name: string
+          price?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration?: number
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_home_service?: boolean
+          is_presential?: boolean
+          name?: string
+          price?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invitations: {
+        Row: {
+          commission_rate: number | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          name: string | null
+          role: string | null
+          status: string | null
+          token: string
+          unit_id: string
+        }
+        Insert: {
+          commission_rate?: number | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          token: string
+          unit_id: string
+        }
+        Update: {
+          commission_rate?: number | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          name?: string | null
+          role?: string | null
+          status?: string | null
+          token?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invitations_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          owner_id: string
+          plan_type: string
+          started_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id: string
+          plan_type?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          owner_id?: string
+          plan_type?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_member_services: {
+        Row: {
+          id: string
+          service_id: string
+          team_member_id: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          team_member_id: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_member_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_member_services_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          accepts_home_visits: boolean
+          bio: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          photo_url: string | null
+          role: string
+          unit_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepts_home_visits?: boolean
+          bio?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          photo_url?: string | null
+          role?: string
+          unit_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepts_home_visits?: boolean
+          bio?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          photo_url?: string | null
+          role?: string
+          unit_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      units: {
+        Row: {
+          accepts_home_visits: boolean
+          address: string | null
+          bio: string | null
+          business_hours: Json
+          business_type: string | null
+          categories: string[] | null
+          cover_url: string | null
+          coverage_radius_km: number
+          created_at: string
+          id: string
+          is_published: boolean
+          latitude: number | null
+          logistics_type: string | null
+          logo_url: string | null
+          longitude: number | null
+          name: string
+          nif: string | null
+          owner_id: string
+          phone: string | null
+          settings_json: Json
+          slug: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepts_home_visits?: boolean
+          address?: string | null
+          bio?: string | null
+          business_hours?: Json
+          business_type?: string | null
+          categories?: string[] | null
+          cover_url?: string | null
+          coverage_radius_km?: number
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          latitude?: number | null
+          logistics_type?: string | null
+          logo_url?: string | null
+          longitude?: number | null
+          name: string
+          nif?: string | null
+          owner_id: string
+          phone?: string | null
+          settings_json?: Json
+          slug?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepts_home_visits?: boolean
+          address?: string | null
+          bio?: string | null
+          business_hours?: Json
+          business_type?: string | null
+          categories?: string[] | null
+          cover_url?: string | null
+          coverage_radius_km?: number
+          created_at?: string
+          id?: string
+          is_published?: boolean
+          latitude?: number | null
+          logistics_type?: string | null
+          logo_url?: string | null
+          longitude?: number | null
+          name?: string
+          nif?: string | null
+          owner_id?: string
+          phone?: string | null
+          settings_json?: Json
+          slug?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      accept_staff_invitation: {
+        Args: { _token: string; _user_id: string; _user_name: string }
+        Returns: Json
+      }
+      check_plan_limit: {
+        Args: { _owner_id: string; _resource: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_company_member: { Args: { _company_id: string }; Returns: boolean }
+      is_company_owner: { Args: { _company_id: string }; Returns: boolean }
+    }
+    Enums: {
+      app_role: "owner" | "team_member"
+      appointment_status:
+        | "pending_approval"
+        | "confirmed"
+        | "en_route"
+        | "arrived"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+      appointment_type: "unit" | "home"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-    PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-            Row: infer R
-        }
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
     ? R
     : never
-    : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-            Row: infer R
-        }
-    ? R
-    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
 
 export type TablesInsert<
-    PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-        Insert: infer I
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
-    : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
-    }
-    ? I
-    : never
+      }
+      ? I
+      : never
     : never
 
 export type TablesUpdate<
-    PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-    TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-        Update: infer U
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
-    : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
-    }
-    ? U
-    : never
+      }
+      ? U
+      : never
     : never
 
 export type Enums<
-    PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-    EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-    : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      app_role: ["owner", "team_member"],
+      appointment_status: [
+        "pending_approval",
+        "confirmed",
+        "en_route",
+        "arrived",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
+      appointment_type: ["unit", "home"],
+    },
+  },
+} as const

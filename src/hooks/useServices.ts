@@ -32,11 +32,7 @@ export function useCreateService() {
             if (!unit) throw new Error('No unit found');
             const { data, error } = await supabase
                 .from('services')
-                .insert({
-                    ...payload,
-                    unit_id: unit.id,
-                    duration_minutes: (payload as any).duration_minutes || payload.duration || 60
-                })
+                .insert({ ...payload, unit_id: unit.id })
                 .select()
                 .single();
             if (error) throw error;

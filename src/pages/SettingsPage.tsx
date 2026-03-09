@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { User, Globe, Bell, Shield, ChevronRight, LogOut, Palette } from 'lucide-react';
+import { User, Bell, Shield, ChevronRight, LogOut, Save, X } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 function SettingsRow({
@@ -44,10 +48,52 @@ function SettingsRow({
 
 export default function SettingsPage() {
   const { data: profile } = useProfile();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [notifications, setNotifications] = useState(true);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
 
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
+  const handleEditProfile = () => {
+    setFullName(profile?.full_name || '');
+    setEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      await supabase.from('profiles').update({ full_name: fullName }).eq('id', user.id);
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      toast({ title: 'Perfil atualizado! ✅' });
+      setEditingProfile(false);
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao atualizar perfil.' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+    setSendingReset(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      toast({ title: 'Email de redefinição enviado! 📧', description: 'Verifique a sua caixa de entrada.' });
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao enviar email.' });
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   return (
     <div className="max-w-xl mx-auto px-4 py-4 space-y-4 pb-24">
@@ -58,9 +104,30 @@ export default function SettingsPage() {
         </div>
         <div>
           <p className="font-bold text-lg">{profile?.full_name || 'Utilizador'}</p>
-          <p className="text-sm text-muted-foreground">{profile?.language === 'pt' ? 'Português' : profile?.language || 'pt'}</p>
+          <p className="text-sm text-muted-foreground">{user?.email || ''}</p>
         </div>
       </div>
+
+      {/* Inline profile edit */}
+      {editingProfile && (
+        <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Editar Perfil</p>
+            <button onClick={() => setEditingProfile(false)} className="w-7 h-7 rounded-full hover:bg-muted flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <Input
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            placeholder="Nome completo"
+          />
+          <Button className="w-full" size="sm" onClick={handleSaveProfile} disabled={savingProfile}>
+            <Save className="w-4 h-4 mr-2" />
+            {savingProfile ? 'A guardar...' : 'Guardar'}
+          </Button>
+        </div>
+      )}
 
       {/* Preferences */}
       <section>
@@ -72,8 +139,6 @@ export default function SettingsPage() {
             sub="Alertas de agendamento"
             right={<Switch checked={notifications} onCheckedChange={setNotifications} />}
           />
-          <SettingsRow icon={Globe} label="Idioma" sub="Português" />
-          <SettingsRow icon={Palette} label="Aparência" sub="Tema escuro (padrão)" />
         </div>
       </section>
 
@@ -81,8 +146,13 @@ export default function SettingsPage() {
       <section>
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 px-1">Conta</p>
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden divide-y divide-border/30">
-          <SettingsRow icon={User} label="Perfil" sub="Editar nome e avatar" />
-          <SettingsRow icon={Shield} label="Segurança" sub="Alterar palavra-passe" />
+          <SettingsRow icon={User} label="Perfil" sub="Editar nome" onClick={handleEditProfile} />
+          <SettingsRow
+            icon={Shield}
+            label="Segurança"
+            sub={sendingReset ? 'A enviar...' : 'Alterar palavra-passe'}
+            onClick={handleResetPassword}
+          />
         </div>
       </section>
 
