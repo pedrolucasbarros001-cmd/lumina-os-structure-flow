@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -12,16 +12,18 @@ import { Loader2 } from 'lucide-react';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const plan = searchParams.get('plan') || 'monthly';
-  
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const planLabel = plan === 'annual' ? 'Anual' : 'Mensal';
   const planPrice = plan === 'annual' ? '€64,75/mês' : '€69/mês';
@@ -34,7 +36,6 @@ export default function Signup() {
       // Store pending plan for post-confirmation processing
       localStorage.setItem('pending_plan', plan);
       toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar.' });
-      navigate('/login');
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
