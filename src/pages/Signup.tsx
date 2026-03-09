@@ -15,16 +15,15 @@ export default function Signup() {
   const { signUp, user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-
-  if (user) {
-    return <Navigate to="/dashboard" replace />;
-  }
   const plan = searchParams.get('plan') || 'monthly';
-  
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const planLabel = plan === 'annual' ? 'Anual' : 'Mensal';
   const planPrice = plan === 'annual' ? '€64,75/mês' : '€69/mês';
