@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Plus, UserCog, Phone, Home, Building2, Users, Mail, Send, Copy, Check } from 'lucide-react';
+import { Plus, Home, Users, Mail, Send, Copy, Check, Lock, Crown } from 'lucide-react';
 import { useTeamMembers, TeamMember, useCreateTeamMember } from '@/hooks/useTeamMembers';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useUnit } from '@/hooks/useUnit';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,11 +16,88 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 
-// Generate random token
 function generateToken(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(24)))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
+}
+
+// Hook to check staff limits based on subscription
+function useStaffLimit() {
+  const { user } = useAuth();
+  const { data: unit } = useUnit();
+
+  return useQuery({
+    queryKey: ['staff_limit', user?.id, unit?.id],
+    queryFn: async () => {
+      if (!user || !unit) return { canInvite: false, current: 0, limit: 0, plan: 'monthly' };
+
+      // Get subscription
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('plan_type, status')
+        .eq('owner_id', user.id)
+        .in('status', ['active', 'trial'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const plan = sub?.plan_type || 'monthly';
+
+      // Count current staff (excluding owner)
+      const { count } = await supabase
+        .from('company_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', unit.id)
+        .neq('role', 'owner');
+
+      const currentStaff = count || 0;
+      const staffLimit = plan === 'annual' ? Infinity : 4; // Monthly: 4 staff, Annual: unlimited
+
+      return {
+        canInvite: currentStaff < staffLimit,
+        current: currentStaff,
+        limit: staffLimit,
+        plan,
+      };
+    },
+    enabled: !!user && !!unit,
+  });
+}
+
+function PaywallModal({ open, onClose, current, limit }: { open: boolean; onClose: () => void; current: number; limit: number }) {
+  return (
+    <Dialog open={open} onOpenChange={o => !o && onClose()}>
+      <DialogContent className="frosted-glass max-w-sm mx-auto">
+        <DialogHeader className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning/20 flex items-center justify-center">
+            <Lock className="w-8 h-8 text-warning" />
+          </div>
+          <DialogTitle className="text-xl">Limite de equipa atingido</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            O seu plano Mensal permite até {limit} colaboradores.
+            Atualmente tem {current} membro{current !== 1 ? 's' : ''}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 mt-4">
+          <div className="glass-card p-4 text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Crown className="w-5 h-5 text-primary" />
+              <span className="font-semibold">Plano Anual</span>
+            </div>
+            <p className="text-sm text-muted-foreground mb-1">Colaboradores ilimitados</p>
+            <p className="text-2xl font-bold text-primary">€64,75<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
+          </div>
+          <Button className="w-full" onClick={onClose}>
+            Fazer Upgrade
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={onClose}>
+            Voltar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function AddMemberSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -156,11 +235,23 @@ function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
             
             <div className="space-y-1">
               <Label>Função</Label>
-              <Input 
-                placeholder="Profissional, Técnico, etc." 
-                value={form.role} 
-                onChange={e => setForm(f => ({ ...f, role: e.target.value }))} 
-              />
+              <div className="flex gap-2">
+                {['Profissional', 'Rececionista', 'Admin'].map(role => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setForm(f => ({ ...f, role }))}
+                    className={cn(
+                      "flex-1 py-2 rounded-xl border text-sm font-medium transition-all haptic-press",
+                      form.role === role
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border text-muted-foreground hover:border-primary/40"
+                    )}
+                  >
+                    {role}
+                  </button>
+                ))}
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -189,7 +280,7 @@ function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) 
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="bg-muted/50 rounded-xl p-4">
+            <div className="glass-card p-4">
               <p className="text-xs text-muted-foreground mb-2">Link de Convite:</p>
               <div className="flex items-center gap-2">
                 <Input 
@@ -229,7 +320,7 @@ function MemberCard({ member }: { member: TeamMember }) {
   const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="bg-card border border-border/50 rounded-2xl p-4 flex items-center gap-4">
+    <div className="glass-card p-4 flex items-center gap-4">
       <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-sm font-bold shrink-0">
         {initials}
       </div>
@@ -252,8 +343,18 @@ function MemberCard({ member }: { member: TeamMember }) {
 
 export default function Team() {
   const { data: teamMembers = [], isLoading } = useTeamMembers();
+  const { data: staffLimit } = useStaffLimit();
   const [addOpen, setAddOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+
+  const handleInviteClick = () => {
+    if (staffLimit && !staffLimit.canInvite) {
+      setPaywallOpen(true);
+    } else {
+      setInviteOpen(true);
+    }
+  };
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
@@ -261,7 +362,7 @@ export default function Team() {
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">{teamMembers.length} membro{teamMembers.length !== 1 ? 's' : ''}</p>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+            <Button size="sm" variant="outline" onClick={handleInviteClick}>
               <Mail className="w-4 h-4 mr-1.5" />Convidar
             </Button>
             <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -282,7 +383,7 @@ export default function Team() {
               <p className="text-sm text-muted-foreground">Adicione a sua equipa para começar</p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setInviteOpen(true)}>
+              <Button variant="outline" onClick={handleInviteClick}>
                 <Mail className="w-4 h-4 mr-2" />Convidar
               </Button>
               <Button onClick={() => setAddOpen(true)}>
@@ -297,6 +398,12 @@ export default function Team() {
 
       <AddMemberSheet open={addOpen} onClose={() => setAddOpen(false)} />
       <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
+      <PaywallModal 
+        open={paywallOpen} 
+        onClose={() => setPaywallOpen(false)} 
+        current={staffLimit?.current || 0}
+        limit={staffLimit?.limit || 4}
+      />
     </div>
   );
 }

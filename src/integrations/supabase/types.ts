@@ -636,6 +636,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_staff_invitation: {
+        Args: { _token: string; _user_id: string; _user_name: string }
+        Returns: Json
+      }
       check_plan_limit: {
         Args: { _owner_id: string; _resource: string }
         Returns: boolean
