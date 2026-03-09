@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PanelLayout from "@/layouts/PanelLayout";
+import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -36,6 +37,9 @@ const App = () => (
         <AuthProvider>
           <CompanyProvider>
           <Routes>
+            {/* Public landing page */}
+            <Route path="/" element={<Index />} />
+
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -52,8 +56,7 @@ const App = () => (
             <Route path="/setup" element={<ProtectedRoute requireSetup={false}><ProgressiveSetup /></ProtectedRoute>} />
 
             {/* Protected panel routes */}
-            <Route path="/" element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>
-              <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="agenda" element={<Agenda />} />
               <Route path="clients" element={<Clients />} />

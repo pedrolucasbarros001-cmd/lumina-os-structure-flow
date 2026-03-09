@@ -218,6 +218,11 @@
   .haptic-press:active {
     transform: scale(0.97);
   }
+
+  /* ═══ Glow Card — Neon highlight for featured items ═══ */
+  .glow-card {
+    box-shadow: 0 0 60px -10px hsl(var(--primary) / 0.35);
+  }
 }
 
 /* ═══ Stagger Animations ═══ */
