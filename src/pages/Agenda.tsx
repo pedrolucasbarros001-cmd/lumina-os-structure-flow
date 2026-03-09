@@ -295,6 +295,13 @@ export default function Agenda() {
       longPressTimer.current = null;
     }
     longPressStartPos.current = null;
+    
+    // Cancel edge scrolling
+    if (edgeScrollRAF.current) {
+      cancelAnimationFrame(edgeScrollRAF.current);
+      edgeScrollRAF.current = null;
+    }
+    
     if (isDragging.current && dragAppt) {
       isDragging.current = false;
       const snappedMinutes = Math.round((dragGhostY / HOUR_HEIGHT) * 60 / 15) * 15;
@@ -330,6 +337,11 @@ export default function Agenda() {
   }, [columns]);
 
   const cancelDrag = () => {
+    // Cancel edge scrolling
+    if (edgeScrollRAF.current) {
+      cancelAnimationFrame(edgeScrollRAF.current);
+      edgeScrollRAF.current = null;
+    }
     setDragAppt(null);
     isDragging.current = false;
   };
