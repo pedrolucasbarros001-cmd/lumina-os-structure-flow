@@ -48,6 +48,9 @@ const App = () => (
 
             {/* Public booking page — no auth required */}
             <Route path="/s/:slug" element={<PublicBooking />} />
+            
+            {/* Staff invite (no auth required) */}
+            <Route path="/invite/:token" element={<StaffInvite />} />
 
             {/* Onboarding (Phase 1) */}
             <Route path="/onboarding" element={<ProtectedRoute requireSetup={false}><Onboarding /></ProtectedRoute>} />
