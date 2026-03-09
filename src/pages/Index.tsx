@@ -1,61 +1,15 @@
-import { Link, Navigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Calendar, Truck, Users, Check } from 'lucide-react';
-
-export default function Index() {
-  const { user, loading } = useAuth();
-
-  if (!loading && user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  const { t } = useTranslation();
-
-  const features = [
-    {
-      icon: Calendar,
-      title: 'Booking Fluido',
-      description: 'Agendamentos inteligentes que se adaptam ao seu fluxo de trabalho.',
-    },
-    {
-      icon: Truck,
-      title: 'Motor Delivery',
-      description: 'Atendimento ao domicílio com cálculo automático de deslocação.',
-    },
-    {
-      icon: Users,
-      title: 'CRM de Equipa',
-      description: 'Gestão completa de colaboradores, comissões e performance.',
-    },
-  ];
-
-  const plans = [
-    {
-      name: 'Mensal',
-      price: '69',
-      period: '/mês',
-      features: ['1 unidade', 'Até 5 colaboradores', 'Agenda ilimitada', 'Motor Delivery'],
-      href: '/signup?plan=monthly',
-      popular: false,
-    },
-    {
-      name: 'Anual',
-      price: '64,75',
-      period: '/mês',
-      subtext: 'Faturado anualmente (€777)',
-      features: ['Até 3 unidades', 'Colaboradores ilimitados', 'Agenda ilimitada', 'Motor Delivery', 'Suporte prioritário'],
-      href: '/signup?plan=annual',
-      popular: true,
-    },
-  ];
-
-import { useNavigate } from 'react-router-dom';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Index() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center relative overflow-hidden">
