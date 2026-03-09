@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { CalendarPlus, CreditCard, Globe, X } from 'lucide-react';
+import { CalendarPlus, CreditCard, Globe, X, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useUserContext } from '@/hooks/useUserContext';
 import NewAppointmentSheet from './NewAppointmentSheet';
 import QuickCheckoutSheet from './QuickCheckoutSheet';
 
@@ -10,7 +11,7 @@ interface QuickActionSheetProps {
     onClose: () => void;
 }
 
-const actions = [
+const ownerActions = [
     {
         id: 'booking',
         icon: CalendarPlus,
@@ -34,16 +35,47 @@ const actions = [
     },
 ];
 
+const staffActions = [
+    {
+        id: 'block',
+        icon: Clock,
+        label: 'Bloquear Horário',
+        sublabel: 'Pausa, almoço, férias...',
+        color: 'from-slate-500 to-slate-700',
+    },
+    {
+        id: 'booking',
+        icon: CalendarPlus,
+        label: 'Novo Agendamento',
+        sublabel: 'Marcar cliente manualmente',
+        color: 'from-indigo-500 to-purple-600',
+    },
+    {
+        id: 'checkout',
+        icon: CreditCard,
+        label: 'Quick Checkout',
+        sublabel: 'Registar venda rápida',
+        color: 'from-emerald-500 to-teal-600',
+    },
+];
+
 export default function QuickActionSheet({ open, onClose }: QuickActionSheetProps) {
     const navigate = useNavigate();
+    const { isStaff } = useUserContext();
     const [bookingOpen, setBookingOpen] = useState(false);
     const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+    const actions = isStaff ? staffActions : ownerActions;
 
     const handleAction = (id: string) => {
         onClose();
         if (id === 'booking') setBookingOpen(true);
         if (id === 'checkout') setCheckoutOpen(true);
         if (id === 'profile') navigate('/unit');
+        if (id === 'block') {
+            // TODO: Implement block time sheet
+            navigate('/agenda');
+        }
     };
 
     return (

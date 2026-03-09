@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Search, Plus, Phone, Mail, ChevronRight, UserCircle2 } from 'lucide-react';
-import { useClients, Client } from '@/hooks/useClients';
-import { useCreateClient } from '@/hooks/useClients';
+import { useClients, Client, useCreateClient } from '@/hooks/useClients';
+import { useUserContext } from '@/hooks/useUserContext';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
@@ -61,6 +61,7 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
 
 export default function Clients() {
   const { data: clients = [], isLoading } = useClients();
+  const { isStaff } = useUserContext();
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
 
@@ -84,9 +85,12 @@ export default function Clients() {
               className="pl-9"
             />
           </div>
-          <Button size="icon" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" />
-          </Button>
+          {/* Hide add button for staff */}
+          {!isStaff && (
+            <Button size="icon" onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">{filtered.length} cliente{filtered.length !== 1 ? 's' : ''}</p>
       </div>
@@ -102,9 +106,15 @@ export default function Clients() {
             <UserCircle2 className="w-12 h-12 text-muted-foreground/40" />
             <div>
               <p className="font-semibold">Sem clientes</p>
-              <p className="text-sm text-muted-foreground">Adicione o primeiro cliente</p>
+              <p className="text-sm text-muted-foreground">
+                {isStaff ? 'Nenhum cliente encontrado' : 'Adicione o primeiro cliente'}
+              </p>
             </div>
-            <Button variant="outline" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-2" />Novo Cliente</Button>
+            {!isStaff && (
+              <Button variant="outline" onClick={() => setAddOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />Novo Cliente
+              </Button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-border/30">
@@ -115,7 +125,8 @@ export default function Clients() {
         )}
       </div>
 
-      <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      {/* Only show sheet for non-staff */}
+      {!isStaff && <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />}
     </div>
   );
 }

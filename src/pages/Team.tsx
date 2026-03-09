@@ -1,14 +1,25 @@
 import { useState } from 'react';
-import { Plus, UserCog, Phone, Home, Building2, Users } from 'lucide-react';
+import { Plus, UserCog, Phone, Home, Building2, Users, Mail, Send, Copy, Check } from 'lucide-react';
 import { useTeamMembers, TeamMember, useCreateTeamMember } from '@/hooks/useTeamMembers';
 import { useAppointments } from '@/hooks/useAppointments';
+import { useUnit } from '@/hooks/useUnit';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+
+// Generate random token
+function generateToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(24)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
 
 function AddMemberSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createMember = useCreateTeamMember();
@@ -48,6 +59,169 @@ function AddMemberSheet({ open, onClose }: { open: boolean; onClose: () => void 
   );
 }
 
+function InviteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { toast } = useToast();
+  const { user } = useAuth();
+  const { data: unit } = useUnit();
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ 
+    email: '', 
+    name: '', 
+    role: 'Profissional', 
+    commission_rate: [40] 
+  });
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!unit || !user) return;
+    
+    setLoading(true);
+    try {
+      const token = generateToken();
+      
+      const { error } = await supabase
+        .from('staff_invitations')
+        .insert({
+          unit_id: unit.id,
+          email: form.email,
+          name: form.name || null,
+          role: form.role,
+          commission_rate: form.commission_rate[0],
+          token,
+          invited_by: user.id,
+        });
+
+      if (error) throw error;
+
+      const link = `${window.location.origin}/invite/${token}`;
+      setInviteLink(link);
+      toast({ title: 'Convite criado!' });
+    } catch (error) {
+      console.error('Error creating invite:', error);
+      toast({ variant: 'destructive', title: 'Erro ao criar convite' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyLink = () => {
+    if (inviteLink) {
+      navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({ title: 'Link copiado!' });
+    }
+  };
+
+  const handleClose = () => {
+    setForm({ email: '', name: '', role: 'Profissional', commission_rate: [40] });
+    setInviteLink(null);
+    setCopied(false);
+    onClose();
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={o => !o && handleClose()}>
+      <SheetContent side="bottom" className="rounded-t-3xl">
+        <SheetHeader className="mb-4">
+          <SheetTitle className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-primary" />
+            Convidar Colaborador
+          </SheetTitle>
+        </SheetHeader>
+        
+        {!inviteLink ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1">
+              <Label>Email *</Label>
+              <Input 
+                type="email" 
+                required 
+                placeholder="colaborador@email.com" 
+                value={form.email} 
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))} 
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <Label>Nome (opcional)</Label>
+              <Input 
+                placeholder="Nome do colaborador" 
+                value={form.name} 
+                onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <Label>Função</Label>
+              <Input 
+                placeholder="Profissional, Técnico, etc." 
+                value={form.role} 
+                onChange={e => setForm(f => ({ ...f, role: e.target.value }))} 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label>Taxa de Comissão</Label>
+                <span className="text-sm font-semibold text-primary">{form.commission_rate[0]}%</span>
+              </div>
+              <Slider
+                value={form.commission_rate}
+                onValueChange={v => setForm(f => ({ ...f, commission_rate: v }))}
+                max={100}
+                min={0}
+                step={5}
+                className="w-full"
+              />
+            </div>
+            
+            <Button type="submit" className="w-full" disabled={loading || !form.email}>
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Gerar Convite
+            </Button>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-muted/50 rounded-xl p-4">
+              <p className="text-xs text-muted-foreground mb-2">Link de Convite:</p>
+              <div className="flex items-center gap-2">
+                <Input 
+                  value={inviteLink} 
+                  readOnly 
+                  className="text-xs bg-background"
+                />
+                <Button 
+                  size="icon" 
+                  variant="outline"
+                  onClick={copyLink}
+                >
+                  {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+            
+            <p className="text-xs text-center text-muted-foreground">
+              Envie este link para <strong>{form.email}</strong>.
+              <br />O convite expira em 7 dias.
+            </p>
+            
+            <Button onClick={handleClose} variant="outline" className="w-full">
+              Fechar
+            </Button>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 function MemberCard({ member }: { member: TeamMember }) {
   const { data: appointments = [] } = useAppointments();
   const memberAppts = appointments.filter(a => a.team_member_id === member.id && a.status === 'completed');
@@ -79,15 +253,21 @@ function MemberCard({ member }: { member: TeamMember }) {
 export default function Team() {
   const { data: teamMembers = [], isLoading } = useTeamMembers();
   const [addOpen, setAddOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
       <div className="sticky top-0 z-10 px-4 pt-4 pb-3 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <p className="text-sm text-muted-foreground">{teamMembers.length} membro{teamMembers.length !== 1 ? 's' : ''}</p>
-          <Button size="sm" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-1.5" />Adicionar
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+              <Mail className="w-4 h-4 mr-1.5" />Convidar
+            </Button>
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4 mr-1.5" />Adicionar
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -101,7 +281,14 @@ export default function Team() {
               <p className="font-semibold">Sem membros de equipa</p>
               <p className="text-sm text-muted-foreground">Adicione a sua equipa para começar</p>
             </div>
-            <Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-2" />Adicionar Membro</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setInviteOpen(true)}>
+                <Mail className="w-4 h-4 mr-2" />Convidar
+              </Button>
+              <Button onClick={() => setAddOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />Adicionar
+              </Button>
+            </div>
           </div>
         ) : (
           teamMembers.map(m => <MemberCard key={m.id} member={m} />)
@@ -109,6 +296,7 @@ export default function Team() {
       </div>
 
       <AddMemberSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <InviteSheet open={inviteOpen} onClose={() => setInviteOpen(false)} />
     </div>
   );
 }
