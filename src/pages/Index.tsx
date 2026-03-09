@@ -1,9 +1,15 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Calendar, Truck, Users, Check } from 'lucide-react';
 
 export default function Index() {
+  const { user, loading } = useAuth();
+
+  if (!loading && user) {
+    return <Navigate to="/dashboard" replace />;
+  }
   const { t } = useTranslation();
 
   const features = [

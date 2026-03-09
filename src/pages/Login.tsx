@@ -23,7 +23,7 @@ export default function Login() {
     setLoading(true);
     try {
       await signIn(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
