@@ -229,7 +229,7 @@ export default function StaffInvite() {
               <div>
                 <h1 className="text-2xl font-bold mb-2">Bem-vindo à equipa!</h1>
                 <p className="text-muted-foreground">
-                  Foi convidado por <span className="font-semibold">{invitation.invited_by_profile?.full_name}</span> para integrar a equipa da{' '}
+                  Foi convidado para integrar a equipa da{' '}
                   <span className="font-semibold text-primary">{invitation.units?.name}</span>
                 </p>
               </div>

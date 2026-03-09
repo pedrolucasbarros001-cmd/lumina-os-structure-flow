@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import ProgressiveSetup from "./pages/ProgressiveSetup";
 import PublicBooking from "./pages/PublicBooking";
+import StaffInvite from "./pages/StaffInvite";
 import Vendas from "./pages/Vendas";
 
 const queryClient = new QueryClient();
