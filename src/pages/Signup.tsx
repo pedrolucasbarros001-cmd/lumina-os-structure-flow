@@ -12,10 +12,13 @@ import { Loader2 } from 'lucide-react';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const { signUp } = useAuth();
-  const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
   const plan = searchParams.get('plan') || 'monthly';
   
   const [fullName, setFullName] = useState('');
