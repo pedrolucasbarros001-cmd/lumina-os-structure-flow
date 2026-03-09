@@ -11,6 +11,7 @@ import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useUnit } from '@/hooks/useUnit';
 import { useProfile } from '@/hooks/useProfile';
+import { useUserContext } from '@/hooks/useUserContext';
 import { cn } from '@/lib/utils';
 
 // ==================== ROLLING NUMBER ====================
@@ -428,10 +429,119 @@ function ServicesRanking({ appointments, isLoading, privacyMode }: {
   );
 }
 
+// ==================== STAFF PERSONAL DASHBOARD ====================
+function StaffDashboard({ teamMemberId, privacyMode }: { teamMemberId: string | null; privacyMode: boolean }) {
+  const { data: allAppointments = [], isLoading } = useAppointments();
+  const { data: services = [] } = useServices();
+  const { data: profile } = useProfile();
+  const { data: teamMembers = [] } = useTeamMembers();
+  
+  const myAppts = useMemo(() => 
+    allAppointments.filter(a => a.team_member_id === teamMemberId && a.status === 'completed'),
+    [allAppointments, teamMemberId]
+  );
+
+  const todayAppts = useMemo(() => 
+    myAppts.filter(a => isSameDay(parseISO(a.datetime), new Date())),
+    [myAppts]
+  );
+
+  const totalToday = todayAppts.reduce((s, a) => s + (a.value || 0), 0);
+  
+  // Commission calculation (from team member data)
+  const myMember = teamMembers.find(m => m.id === teamMemberId);
+  const commissionRate = 0.4; // Default 40% - this should come from company_members in future
+  const estimatedCommission = totalToday * commissionRate;
+
+  // Modality breakdown
+  const homeCount = myAppts.filter(a => a.type === 'home').length;
+  const unitCount = myAppts.filter(a => a.type === 'unit').length;
+  const total = Math.max(homeCount + unitCount, 1);
+  const homePct = Math.round((homeCount / total) * 100);
+  const unitPct = Math.round((unitCount / total) * 100);
+
+  // Top 3 services
+  const serviceCounts: Record<string, number> = {};
+  myAppts.forEach(a => {
+    a.service_ids?.forEach(sid => {
+      serviceCounts[sid] = (serviceCounts[sid] || 0) + 1;
+    });
+  });
+  const topServices = Object.entries(serviceCounts)
+    .map(([sid, count]) => ({ service: services.find(s => s.id === sid), count }))
+    .filter(x => x.service)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  return (
+    <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto pb-24 relative z-10 stagger-container">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs text-muted-foreground">As Minhas Vendas 💪</p>
+          <h1 className="text-xl font-bold font-display">Olá, {profile?.full_name?.split(' ')[0] || 'Colaborador'}</h1>
+        </div>
+      </div>
+
+      {/* Main Revenue Card */}
+      <div className="frosted-glass p-5">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-2">Faturação Hoje</p>
+        <p className={cn("text-4xl font-bold tracking-tight font-display", privacyMode && "privacy-blur")}>
+          <RollingNumber value={totalToday.toFixed(2)} prefix="€" privacyMode={privacyMode} />
+        </p>
+        <p className={cn("text-sm text-success font-semibold mt-2", privacyMode && "privacy-blur")}>
+          Comissão estimada: €{estimatedCommission.toFixed(2)}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">{todayAppts.length} atendimento{todayAppts.length !== 1 ? 's' : ''} concluído{todayAppts.length !== 1 ? 's' : ''}</p>
+      </div>
+
+      {/* Modality Ring */}
+      <div className="frosted-glass p-5">
+        <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium mb-4">A Minha Modalidade</p>
+        <div className="flex items-center gap-6">
+          <AppleRings localPct={unitPct} deliveryPct={homePct} />
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-info" />
+              <span className="text-sm flex-1">No Local</span>
+              <span className="text-sm font-bold">{unitPct}%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-primary" />
+              <span className="text-sm flex-1">Domicílio</span>
+              <span className="text-sm font-bold">{homePct}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Services */}
+      {topServices.length > 0 && (
+        <div className="frosted-glass p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Briefcase className="w-4 h-4 text-muted-foreground" />
+            <p className="text-xs text-muted-foreground uppercase tracking-widest font-medium">Meus Serviços Top</p>
+          </div>
+          <div className="space-y-3">
+            {topServices.map((item, i) => (
+              <div key={item.service!.id} className="flex items-center gap-3">
+                <span className="text-lg w-6 text-center">{['🥇', '🥈', '🥉'][i]}</span>
+                <span className="flex-1 text-sm font-medium">{item.service!.name}</span>
+                <span className="text-xs text-muted-foreground">{item.count}×</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ==================== DASHBOARD PAGE ====================
 export default function Dashboard() {
   const { data: unit } = useUnit();
   const { data: profile } = useProfile();
+  const { isStaff, teamMemberId } = useUserContext();
   const [timeframe, setTimeframe] = useState<Timeframe>('today');
   const [privacyMode, setPrivacyMode] = useState(false);
 
@@ -445,6 +555,11 @@ export default function Dashboard() {
   const filtered = useMemo(() => filterByTimeframe(allAppointments, timeframe), [allAppointments, timeframe]);
 
   const isIndependent = profile?.business_type === 'independent';
+
+  // If staff, show personal dashboard
+  if (isStaff) {
+    return <StaffDashboard teamMemberId={teamMemberId} privacyMode={privacyMode} />;
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-2xl mx-auto pb-24 relative z-10 stagger-container">
