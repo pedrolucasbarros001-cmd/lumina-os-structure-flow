@@ -21,13 +21,13 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0-23
 const COL_WIDTH = 150; // px per team member column
 const TIME_AXIS_W = 52; // px for left time axis
 
-const STATUS_COLORS: Record<string, string> = {
-  pending_approval: '#f59e0b',
-  confirmed: '#6366f1',
-  in_transit: '#f59e0b',
-  arrived: '#10b981',
-  completed: '#6b7280',
-  cancelled: '#ef4444',
+const STATUS_STYLES: Record<string, { bg: string, text: string }> = {
+  pending_approval: { bg: '#fcd34d', text: '#451a03' }, // amber-300
+  confirmed: { bg: '#38bdf8', text: '#082f49' }, // sky-400 (matches screenshot cyan)
+  in_transit: { bg: '#fcd34d', text: '#451a03' }, // amber-300
+  arrived: { bg: '#34d399', text: '#064e3b' }, // emerald-400
+  completed: { bg: '#94a3b8', text: '#0f172a' }, // slate-400
+  cancelled: { bg: '#f87171', text: '#450a0a' }, // red-400
 };
 
 function topForTime(datetime: string) {
@@ -56,7 +56,7 @@ function ApptBlock({
   const svc = (services || []).find(s => appt.service_ids?.includes(s.id));
   const startStr = format(parseISO(appt.datetime), 'HH:mm');
   const endStr = format(addMinutes(parseISO(appt.datetime), durationMin), 'HH:mm');
-  const color = STATUS_COLORS[appt.status] || '#6366f1';
+  const style = STATUS_STYLES[appt.status] || STATUS_STYLES['confirmed'];
 
   let touchTimer = useRef<ReturnType<typeof setTimeout>>();
 
@@ -69,18 +69,18 @@ function ApptBlock({
 
   return (
     <div
-      style={{ top, height, left: 4, right: 4, position: 'absolute', backgroundColor: color + '33', borderLeft: `3px solid ${color}`, borderRadius: 8 }}
-      className="cursor-pointer p-1.5 overflow-hidden select-none active:scale-[0.98] transition-transform"
+      style={{ top, height, left: 4, right: 4, position: 'absolute', backgroundColor: style.bg, borderRadius: 8 }}
+      className="cursor-pointer p-1.5 overflow-hidden select-none active:scale-[0.98] transition-transform shadow-sm"
       onClick={onClick}
       onMouseDown={(e) => onDragStart(e, appt)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <p className="text-[10px] font-semibold leading-tight" style={{ color }}>
+      <p className="text-[10px] font-semibold leading-tight flex items-center gap-1" style={{ color: style.text }}>
         {startStr} – {endStr} {appt.client_name}
       </p>
-      {svc && <p className="text-[10px] text-muted-foreground truncate">{svc.name}</p>}
-      {(appt as any).type === 'home' && <p className="text-[9px] text-orange-400">🏠 Domicílio</p>}
+      {svc && <p className="text-[10px] truncate" style={{ color: style.text, opacity: 0.85 }}>{svc.name}</p>}
+      {(appt as any).type === 'home' && <p className="text-[9px] mt-0.5 font-bold" style={{ color: style.text }}>🏠 Domicílio</p>}
     </div>
   );
 }
@@ -204,9 +204,9 @@ export default function Agenda() {
         </div>
 
         {/* Team member columns header */}
-        <div className="flex" style={{ paddingLeft: TIME_AXIS_W }}>
+        <div className="flex flex-1" style={{ paddingLeft: TIME_AXIS_W }}>
           {columns.map(m => (
-            <div key={m.id} className="shrink-0 flex flex-col items-center gap-1 py-2 border-r border-border/30 last:border-r-0" style={{ width: COL_WIDTH }}>
+            <div key={m.id} className="flex-1 min-w-[150px] shrink-0 flex flex-col items-center gap-1 py-2 border-r border-border/30 last:border-r-0">
               <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold text-primary">
                 {(m.name || '?')[0].toUpperCase()}
               </div>
@@ -235,7 +235,7 @@ export default function Agenda() {
         onMouseUp={handleDragEnd}
         onTouchEnd={handleDragEnd}
       >
-        <div style={{ position: 'relative', height: HOUR_HEIGHT * 24, display: 'flex' }}>
+        <div style={{ position: 'relative', height: HOUR_HEIGHT * 24, display: 'flex', minWidth: '100%' }}>
           {/* Time axis */}
           <div className="shrink-0 sticky left-0 z-10 bg-background" style={{ width: TIME_AXIS_W }}>
             {HOURS.map(h => (
@@ -272,8 +272,7 @@ export default function Agenda() {
             const colAppts = appointments.filter(a => (a as any).team_member_id === member.id || team.length === 0);
             return (
               <div key={member.id}
-                className="shrink-0 border-l border-border/30 relative"
-                style={{ width: COL_WIDTH }}
+                className="flex-1 min-w-[150px] shrink-0 border-l border-border/30 relative"
                 onMouseDown={(e) => {
                   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                   const relY = e.clientY - rect.top + (gridRef.current?.scrollTop || 0);

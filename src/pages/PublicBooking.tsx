@@ -77,6 +77,9 @@ export default function PublicBooking() {
     const [saving, setSaving] = useState(false);
     const [weekOffset, setWeekOffset] = useState(0);
 
+    const [occupiedSlots, setOccupiedSlots] = useState<{ start: number, end: number }[]>([]);
+    const [fetchingSlots, setFetchingSlots] = useState(false);
+
     useEffect(() => {
         if (!slug) return;
         (async () => {
@@ -113,6 +116,46 @@ export default function PublicBooking() {
             }
         })();
     }, [slug]);
+
+    // Fetch occupied slots when datetime step is reached and specific date/pro is selected
+    useEffect(() => {
+        if (!unit || step !== 'datetime') return;
+        (async () => {
+            setFetchingSlots(true);
+            try {
+                const startOfDay = new Date(selectedDate);
+                startOfDay.setHours(0, 0, 0, 0);
+
+                const endOfDay = new Date(selectedDate);
+                endOfDay.setHours(23, 59, 59, 999);
+
+                let query = supabase
+                    .from('appointments')
+                    .select('datetime, duration_minutes')
+                    .eq('unit_id', unit.id)
+                    .in('status', ['pending_approval', 'confirmed', 'in_transit', 'arrived']) // exclude cancelled or completed history if they don't block
+                    .gte('datetime', startOfDay.toISOString())
+                    .lte('datetime', endOfDay.toISOString());
+
+                if (selectedPro && 'id' in selectedPro && selectedPro.id !== '__any') {
+                    query = query.eq('team_member_id', selectedPro.id);
+                }
+
+                const { data, error } = await query;
+                if (!error && data) {
+                    const slots = data.map(appt => {
+                        const d = new Date(appt.datetime);
+                        const start = d.getHours() * 60 + d.getMinutes();
+                        const dur = appt.duration_minutes || 60;
+                        return { start, end: start + dur };
+                    });
+                    setOccupiedSlots(slots);
+                }
+            } finally {
+                setFetchingSlots(false);
+            }
+        })();
+    }, [unit, selectedDate, selectedPro, step]);
 
     const handleBook = async () => {
         if (!unit || !selectedService || !selectedDate || !selectedTime || !clientName) return;
@@ -435,19 +478,48 @@ export default function PublicBooking() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-3">
-                            {['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '18:00'].map((t) => (
-                                <button
-                                    key={t}
-                                    onClick={() => setSelectedTime(t)}
-                                    className={cn(
-                                        'py-4 rounded-2xl border text-xs font-black tracking-tight transition-all',
-                                        selectedTime === t ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'
-                                    )}
-                                >
-                                    {t}
-                                </button>
-                            ))}
+                        <div className="grid grid-cols-4 gap-3 relative min-h-[100px]">
+                            {fetchingSlots && (
+                                <div className="absolute inset-0 bg-[#09090b]/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                                    <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                                </div>
+                            )}
+
+                            {(() => {
+                                const ALL_TIMES = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '18:00'];
+                                const availableTimes = ALL_TIMES.filter(t => {
+                                    const [h, m] = t.split(':').map(Number);
+                                    const startMins = h * 60 + m;
+                                    const dur = selectedService?.duration_minutes || 60;
+                                    const endMins = startMins + dur;
+
+                                    if (isSameDay(selectedDate, new Date())) {
+                                        const now = new Date();
+                                        const nowMins = now.getHours() * 60 + now.getMinutes();
+                                        if (startMins <= nowMins) return false;
+                                    }
+
+                                    const overlaps = occupiedSlots.some(occ => startMins < occ.end && endMins > occ.start);
+                                    return !overlaps;
+                                });
+
+                                if (availableTimes.length === 0 && !fetchingSlots) {
+                                    return <div className="col-span-4 text-center py-8 text-zinc-500 font-bold text-sm">Nenhum horário disponível para este dia.</div>;
+                                }
+
+                                return availableTimes.map((t) => (
+                                    <button
+                                        key={t}
+                                        onClick={() => setSelectedTime(t)}
+                                        className={cn(
+                                            'py-4 rounded-2xl border text-xs font-black tracking-tight transition-all',
+                                            selectedTime === t ? 'bg-primary border-primary text-white shadow-xl shadow-primary/20' : 'bg-zinc-900/40 border-zinc-800 text-zinc-400'
+                                        )}
+                                    >
+                                        {t}
+                                    </button>
+                                ));
+                            })()}
                         </div>
                     </div>
                 )}

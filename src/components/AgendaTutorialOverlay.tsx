@@ -118,14 +118,17 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
 
 // Hook to check if tutorial was already seen
 export function useAgendaTutorial() {
-    const [show, setShow] = useState(false);
+    const [show, setShow] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return !localStorage.getItem(SEEN_KEY);
+        }
+        return false;
+    });
 
-    useEffect(() => {
-        const seen = localStorage.getItem(SEEN_KEY);
-        if (!seen) setShow(true);
-    }, []);
-
-    const dismiss = () => setShow(false);
+    const dismiss = () => {
+        localStorage.setItem(SEEN_KEY, 'true');
+        setShow(false);
+    };
 
     return { show, dismiss };
 }

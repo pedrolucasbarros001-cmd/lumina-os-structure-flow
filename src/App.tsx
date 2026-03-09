@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
 import ProgressiveSetup from "./pages/ProgressiveSetup";
 import PublicBooking from "./pages/PublicBooking";
+import PlanSelection from "./pages/PlanSelection";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,9 @@ const App = () => (
 
             {/* Public booking page — no auth required */}
             <Route path="/s/:slug" element={<PublicBooking />} />
+
+            {/* Plan selection page */}
+            <Route path="/plans" element={<PlanSelection />} />
 
             {/* Onboarding (Phase 1) */}
             <Route path="/onboarding" element={<ProtectedRoute requireSetup={false}><Onboarding /></ProtectedRoute>} />

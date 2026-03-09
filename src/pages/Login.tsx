@@ -79,7 +79,7 @@ export default function Login() {
           </form>
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {t('auth.noAccount')}{' '}
-            <Link to="/signup" className="text-primary hover:underline font-medium">
+            <Link to="/plans" className="text-primary hover:underline font-medium">
               {t('auth.signup')}
             </Link>
           </p>
