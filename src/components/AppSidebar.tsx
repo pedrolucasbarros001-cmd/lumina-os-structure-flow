@@ -44,7 +44,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { signOut } = useAuth();
-  const location = useLocation();
+  const { data: unit } = useUnit();
   const { data: unit } = useUnit();
   const { isStaff } = useUserContext();
 
