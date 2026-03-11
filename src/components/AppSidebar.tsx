@@ -9,7 +9,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { NavLink } from '@/components/NavLink';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
