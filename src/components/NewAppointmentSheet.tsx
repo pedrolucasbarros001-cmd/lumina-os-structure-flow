@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Search, Plus, UserRound, Calendar, Clock, Repeat, ChevronDown, Mail, MoreHorizontal } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { useClients } from '@/hooks/useClients';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useCreateAppointment } from '@/hooks/useAppointments';
 import { useToast } from '@/hooks/use-toast';
+import { useUserContext } from '@/hooks/useUserContext';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -30,6 +32,8 @@ interface SelectedService {
 }
 
 export default function NewAppointmentSheet({ open, onClose, prefillDate, prefillTime, prefillTeamMemberId }: NewAppointmentSheetProps) {
+  const navigate = useNavigate();
+  const { isStaff } = useUserContext();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
   const { data: teamMembers = [] } = useTeamMembers();
@@ -44,7 +48,20 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState(prefillTeamMemberId || '');
 
-  const datetime = prefillTime || (prefillDate ? `${prefillDate}T10:00` : '');
+  const datetime = useMemo(() => {
+    if (prefillTime) return prefillTime;
+
+    const baseDate = prefillDate ? new Date(`${prefillDate}T10:00:00`) : new Date();
+    baseDate.setSeconds(0, 0);
+
+    const mins = baseDate.getMinutes();
+    const remainder = mins % 15;
+    if (remainder !== 0) {
+      baseDate.setMinutes(mins + (15 - remainder));
+    }
+
+    return format(baseDate, "yyyy-MM-dd'T'HH:mm");
+  }, [prefillDate, prefillTime]);
 
   useEffect(() => {
     if (open) {
@@ -225,7 +242,20 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
               })}
 
               {activeServices.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhum serviço encontrado</p>
+                <div className="text-center py-10 px-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">Nenhum serviço ativo encontrado</p>
+                  {!isStaff && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        onClose();
+                        navigate('/catalogo');
+                      }}
+                    >
+                      Criar primeiro serviço
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -247,7 +277,6 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
             </div>
 
             <div className="flex-1 overflow-y-auto">
-              {/* Client card */}
               <div className="px-4 py-4 border-b border-border/30">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -273,7 +302,6 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                 </div>
               </div>
 
-              {/* Date/Time info */}
               <div className="px-4 py-3 space-y-2.5 border-b border-border/30">
                 <div className="flex items-center gap-3 text-sm">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -289,7 +317,6 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                 </div>
               </div>
 
-              {/* Services list */}
               <div className="px-4 py-3 border-b border-border/30">
                 {selectedServices.map(s => (
                   <div key={s.id} className="flex items-center gap-3 py-2">
@@ -321,7 +348,6 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
               </div>
             </div>
 
-            {/* Sticky footer */}
             <div className="border-t border-border/50 px-4 py-4 bg-background space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total</span>

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowLeftRight, Plus, GripVertical } from 'lucide-react';
-
-const SEEN_KEY = 'lumina_agenda_tutorial_seen';
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
 
 const STEPS = [
   {
@@ -29,7 +30,7 @@ const STEPS = [
 ];
 
 interface AgendaTutorialOverlayProps {
-  onFinish: () => void;
+  onFinish: () => void | Promise<void>;
 }
 
 export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverlayProps) {
@@ -43,8 +44,7 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
   const goNext = () => {
     if (animating) return;
     if (isLast) {
-      localStorage.setItem(SEEN_KEY, 'true');
-      onFinish();
+      void onFinish();
     } else {
       setAnimating(true);
       setTimeout(() => {
@@ -55,16 +55,13 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
   };
 
   const skip = () => {
-    localStorage.setItem(SEEN_KEY, 'true');
-    onFinish();
+    void onFinish();
   };
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-auto flex flex-col">
-      {/* Dark overlay — the real grid is visible behind (rendered underneath in DOM) */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/90" />
 
-      {/* Skip */}
       <button
         onClick={skip}
         className="absolute top-4 right-4 z-10 text-sm text-white/60 hover:text-white/90 transition-colors"
@@ -72,18 +69,15 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
         Ignorar
       </button>
 
-      {/* Center icon area */}
       <div className="flex-1 flex items-center justify-center relative">
         <div className={cn(
           'flex flex-col items-center gap-4 transition-all duration-200',
           animating ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
         )}>
-          {/* Animated gesture icon */}
           <div className="relative">
             <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/20">
               <StepIcon className="w-10 h-10 text-white" />
             </div>
-            {/* Animated hand pointer */}
             <div className="absolute -bottom-3 -right-3 w-8 h-8 animate-bounce">
               <span className="text-2xl">👆</span>
             </div>
@@ -91,18 +85,15 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
         </div>
       </div>
 
-      {/* Bottom card area */}
       <div className={cn(
         'relative px-6 pb-10 pt-6 space-y-5 transition-all duration-200',
         animating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
       )}>
-        {/* Text */}
         <div className="text-center space-y-2">
           <h3 className="text-xl font-bold text-white">{step.title}</h3>
           <p className="text-sm text-white/70 max-w-xs mx-auto">{step.description}</p>
         </div>
 
-        {/* Progress dots */}
         <div className="flex items-center justify-center gap-2">
           {STEPS.map((_, i) => (
             <div
@@ -115,7 +106,6 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
           ))}
         </div>
 
-        {/* Action button */}
         <button
           onClick={goNext}
           className="w-full h-12 rounded-2xl bg-white text-black font-bold text-sm flex items-center justify-center active:scale-[0.98] transition-transform"
@@ -127,19 +117,27 @@ export default function AgendaTutorialOverlay({ onFinish }: AgendaTutorialOverla
   );
 }
 
-// Hook to check if tutorial was already seen
+// Tutorial is now persisted per account (DB), not per browser localStorage.
 export function useAgendaTutorial() {
-  const [show, setShow] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !localStorage.getItem(SEEN_KEY);
-    }
-    return false;
-  });
+  const { user } = useAuth();
+  const { data: profile, isLoading } = useProfile();
+  const [show, setShow] = useState(false);
 
-  const dismiss = () => {
-    localStorage.setItem(SEEN_KEY, 'true');
+  useEffect(() => {
+    if (!user || isLoading) return;
+    setShow(!profile?.agenda_tutorial_completed);
+  }, [user, isLoading, profile?.agenda_tutorial_completed]);
+
+  const dismiss = useCallback(async () => {
     setShow(false);
-  };
 
-  return { show, dismiss };
+    if (!user || profile?.agenda_tutorial_completed) return;
+
+    await supabase
+      .from('profiles')
+      .update({ agenda_tutorial_completed: true })
+      .eq('id', user.id);
+  }, [user, profile?.agenda_tutorial_completed]);
+
+  return { show: !!user && !isLoading && show, dismiss };
 }
