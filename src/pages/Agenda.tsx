@@ -24,7 +24,7 @@ const TIME_LABEL_WIDTH = 56;
 const STATUS_STYLES: Record<string, { bg: string, text: string }> = {
   pending_approval: { bg: '#fcd34d', text: '#451a03' }, // amber-300
   confirmed: { bg: '#38bdf8', text: '#082f49' }, // sky-400 (matches screenshot cyan)
-  in_transit: { bg: '#fcd34d', text: '#451a03' }, // amber-300
+  en_route: { bg: '#fcd34d', text: '#451a03' }, // amber-300
   arrived: { bg: '#34d399', text: '#064e3b' }, // emerald-400
   completed: { bg: '#94a3b8', text: '#0f172a' }, // slate-400
   cancelled: { bg: '#f87171', text: '#450a0a' }, // red-400

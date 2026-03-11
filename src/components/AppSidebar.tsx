@@ -9,11 +9,10 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
+import { useUserContext } from '@/hooks/useUserContext';
 import { CompanySwitcher } from '@/components/CompanySwitcher';
 import {
   Sidebar,
@@ -45,12 +44,16 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const { signOut } = useAuth();
-  const location = useLocation();
   const { data: unit } = useUnit();
+  const { isStaff } = useUserContext();
 
   const visibleItems = NAV_ITEMS.filter(item => {
-    // Hide "Equipa" for solo users
+    // Hide owner/admin sections for staff users
+    if (isStaff && ['team', 'unit', 'settings'].includes(item.key)) return false;
+
+    // Hide "Equipa" for solo businesses
     if (item.key === 'team' && unit?.business_type === 'solo') return false;
+
     return true;
   });
 

@@ -82,7 +82,17 @@ export default function Onboarding() {
 
       if (unitError) throw unitError;
 
-      // 2. Add as Team Member (Owner is also a professional by default)
+      // 2. Create owner membership row (enables company-scoped access/features)
+      const { error: membershipError } = await supabase.from('company_members').insert({
+        company_id: unit.id,
+        user_id: user.id,
+        role: 'owner',
+        commission_rate: 0,
+      });
+
+      if (membershipError) throw membershipError;
+
+      // 3. Add as Team Member (Owner is also a professional by default)
       await supabase.from('team_members').insert({
         unit_id: unit.id,
         user_id: user.id,
@@ -91,7 +101,7 @@ export default function Onboarding() {
         accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid'
       });
 
-      // 3. Mark Onboarding as Completed + save profile preferences
+      // 4. Mark Onboarding as Completed + save profile preferences
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -99,6 +109,8 @@ export default function Onboarding() {
           business_type: businessType,
           service_model: logisticsType,
           team_size: businessType === 'team' ? teamSize : null,
+          user_type: 'owner',
+          linked_unit_id: unit.id,
         })
         .eq('id', user.id);
 

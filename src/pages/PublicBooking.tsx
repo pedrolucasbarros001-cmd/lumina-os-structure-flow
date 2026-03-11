@@ -82,9 +82,9 @@ export default function PublicBooking() {
 
         let query = supabase
           .from('appointments')
-          .select('datetime, duration_minutes')
+          .select('datetime, duration')
           .eq('unit_id', unit.id)
-          .in('status', ['pending_approval', 'confirmed', 'in_transit', 'arrived'])
+          .in('status', ['pending_approval', 'confirmed', 'en_route', 'arrived'])
           .gte('datetime', startOfDay.toISOString())
           .lte('datetime', endOfDay.toISOString());
 
@@ -97,7 +97,7 @@ export default function PublicBooking() {
           const slots = data.map(appt => {
             const d = new Date(appt.datetime);
             const start = d.getHours() * 60 + d.getMinutes();
-            const dur = appt.duration_minutes || 60;
+            const dur = appt.duration || 60;
             return { start, end: start + dur };
           });
           setOccupiedSlots(slots);
