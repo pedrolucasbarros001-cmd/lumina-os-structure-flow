@@ -45,7 +45,6 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const { signOut } = useAuth();
   const { data: unit } = useUnit();
-  const { data: unit } = useUnit();
   const { isStaff } = useUserContext();
 
   const visibleItems = NAV_ITEMS.filter(item => {
