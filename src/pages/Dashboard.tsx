@@ -6,12 +6,15 @@ import {
 import { format, subDays, startOfWeek, startOfMonth, startOfYear, parseISO, isSameDay } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { BarChart, Bar, ResponsiveContainer } from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 import { useAppointments, Appointment } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useUnit } from '@/hooks/useUnit';
 import { useProfile } from '@/hooks/useProfile';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserContext } from '@/hooks/useUserContext';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 // ==================== ROLLING NUMBER ====================
@@ -431,10 +434,29 @@ function ServicesRanking({ appointments, isLoading, privacyMode }: {
 
 // ==================== STAFF PERSONAL DASHBOARD ====================
 function StaffDashboard({ teamMemberId, privacyMode }: { teamMemberId: string | null; privacyMode: boolean }) {
+  const { user } = useAuth();
+  const { data: unit } = useUnit();
   const { data: allAppointments = [], isLoading } = useAppointments();
   const { data: services = [] } = useServices();
   const { data: profile } = useProfile();
   const { data: teamMembers = [] } = useTeamMembers();
+  
+  // Buscar a comissão real do staff na empresa
+  const { data: membership } = useQuery({
+    queryKey: ['staff_commission', user?.id, unit?.id],
+    queryFn: async () => {
+      if (!user || !unit) return null;
+      const { data, error } = await supabase
+        .from('company_members')
+        .select('commission_rate')
+        .eq('user_id', user.id)
+        .eq('company_id', unit.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user && !!unit,
+  });
   
   const myAppts = useMemo(() => 
     allAppointments.filter(a => a.team_member_id === teamMemberId && a.status === 'completed'),
@@ -448,9 +470,8 @@ function StaffDashboard({ teamMemberId, privacyMode }: { teamMemberId: string | 
 
   const totalToday = todayAppts.reduce((s, a) => s + (a.value || 0), 0);
   
-  // Commission calculation (from team member data)
-  const myMember = teamMembers.find(m => m.id === teamMemberId);
-  const commissionRate = 0.4; // Default 40% - this should come from company_members in future
+  // Commission calculation — BD guarda como 0-100, portanto divide por 100
+  const commissionRate = (membership?.commission_rate ?? 40) / 100;
   const estimatedCommission = totalToday * commissionRate;
 
   // Modality breakdown

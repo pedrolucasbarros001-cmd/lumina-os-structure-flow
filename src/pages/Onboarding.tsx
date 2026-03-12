@@ -65,17 +65,30 @@ export default function Onboarding() {
     if (!user) return;
     setLoading(true);
     try {
+      // Generate unique slug from business name
+      const slugBase = businessName
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove accents
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .slice(0, 30);
+      const randomSuffix = Math.random().toString(36).slice(2, 7);
+      const slug = `${slugBase}-${randomSuffix}`;
+
       // 1. Create Unit
       const { data: unit, error: unitError } = await supabase
         .from('units')
         .insert({
           owner_id: user.id,
           name: businessName,
+          slug, // CRÍTICO: slug gerado
           business_type: businessType,
           logistics_type: logisticsType,
           accepts_home_visits: logisticsType === 'home' || logisticsType === 'hybrid',
           coverage_radius_km: (logisticsType === 'home' || logisticsType === 'hybrid') ? radius[0] : 0,
           categories: selectedCategories,
+          is_published: false, // Começa offline, owner ativa na página Empresa
         })
         .select()
         .single();

@@ -5,6 +5,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu } from 
 import { useAppointments, Appointment, useUpdateAppointmentStatus, useUpdateAppointment } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
+import { useUserContext } from '@/hooks/useUserContext';
 import NewAppointmentSheet from '@/components/NewAppointmentSheet';
 import AppointmentDetailSheet from '@/components/AppointmentDetailSheet';
 import AgendaTutorialOverlay, { useAgendaTutorial } from '@/components/AgendaTutorialOverlay';
@@ -190,11 +191,19 @@ export default function Agenda() {
   const { data: appointments = [] } = useAppointments(dateStr);
   const { data: teamMembers = [] } = useTeamMembers();
   const { data: services = [] } = useServices();
+  const { isStaff, teamMemberId } = useUserContext();
 
   const columns = useMemo(() => {
     if (teamMembers.length === 0) return [{ id: '__self', name: 'Eu', photo_url: null as string | null }];
+    
+    // Staff vê apenas a sua própria coluna
+    if (isStaff && teamMemberId) {
+      const myMember = teamMembers.find(m => m.id === teamMemberId);
+      if (myMember) return [{ id: myMember.id, name: myMember.name, photo_url: myMember.photo_url }];
+    }
+    
     return teamMembers.map(m => ({ id: m.id, name: m.name, photo_url: m.photo_url }));
-  }, [teamMembers]);
+  }, [teamMembers, isStaff, teamMemberId]);
 
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
 
