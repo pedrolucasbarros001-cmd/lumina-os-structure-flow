@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 
 export default function Signup() {
   const { t } = useTranslation();
-  const { signUp, user } = useAuth();
+  const { signUp, signIn, user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -34,15 +34,29 @@ export default function Signup() {
     e.preventDefault();
     setLoading(true);
     try {
+      // 1. Criar conta
       await signUp(email, password, fullName);
-      // Store pending plan for post-confirmation processing
+      
+      // 2. Guardar plano
       localStorage.setItem('pending_plan', plan);
-      toast({
-        title: 'Conta criada!',
-        description: 'Verifique seu e-mail para confirmar a conta e depois faça login.',
-      });
-      // Redirect to login with next=/onboarding so after login they go straight to onboarding
-      navigate('/login?next=/onboarding', { replace: true });
+      
+      // 3. Tentar fazer login automático
+      try {
+        await signIn(email, password);
+        // Se login bem-sucedido, ir direto para Onboarding
+        toast({
+          title: 'Bem-vindo!',
+          description: 'A redirecioná-lo para a configuração...',
+        });
+        navigate('/onboarding', { replace: true });
+      } catch (loginError) {
+        // Se login falhar (email não confirmado), pedir para confirmar
+        toast({
+          title: 'Conta criada!',
+          description: 'Verifique seu e-mail para confirmar a conta, depois faça login.',
+        });
+        navigate('/login', { replace: true });
+      }
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
