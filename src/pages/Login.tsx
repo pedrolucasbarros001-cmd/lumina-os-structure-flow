@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,17 +9,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
+// Whitelist of safe internal routes for the `next` param
+const SAFE_NEXT_ROUTES = ['/onboarding', '/dashboard', '/setup', '/agenda'];
+
+function getSafeNext(searchParams: URLSearchParams): string {
+  const next = searchParams.get('next');
+  if (next && SAFE_NEXT_ROUTES.includes(next)) return next;
+  return '/dashboard';
+}
+
 export default function Login() {
   const { t } = useTranslation();
   const { signIn, user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Reactive redirect: once onAuthStateChange sets user, re-render triggers this
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={getSafeNext(searchParams)} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

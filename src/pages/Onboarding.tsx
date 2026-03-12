@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, UserCircle2, ArrowRight, Briefcase, Users, Store, Bike, MapPin, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { ArrowRight, Briefcase, Users, Store, Bike, MapPin, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -12,7 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
-type OnboardingStep = 'type' | 'size' | 'categories' | 'logistics' | 'done';
+type OnboardingStep = 'identity' | 'size' | 'categories' | 'logistics' | 'done';
 
 const businessCategories = [
   'Cabelo', 'Barbearia', 'Estética', 'Massagem', 'Tatuagem', 
@@ -27,26 +27,27 @@ export default function Onboarding() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Redirect if already completed
+  // Redirect if already completed (extra safety — ProtectedRoute also handles this)
   useEffect(() => {
     if (!profileLoading && profile?.onboarding_completed) {
       navigate('/dashboard', { replace: true });
     }
   }, [profile, profileLoading, navigate]);
 
-  const [step, setStep] = useState<OnboardingStep>('type');
+  const [step, setStep] = useState<OnboardingStep>('identity');
   const [loading, setLoading] = useState(false);
 
-  // Form State
-  const [profileType, setProfileType] = useState<'owner' | 'staff' | null>(null);
+  // Form State — Step 1: Identity
   const [businessName, setBusinessName] = useState('');
-  const [joinCode, setJoinCode] = useState('');
 
+  // Step 2: Size
   const [businessType, setBusinessType] = useState<'solo' | 'team' | null>(null);
   const [teamSize, setTeamSize] = useState<string>('');
 
+  // Step 3: Categories
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+  // Step 4: Logistics
   const [logisticsType, setLogisticsType] = useState<'unit' | 'home' | 'hybrid' | null>(null);
   const [radius, setRadius] = useState([10]);
   const [baseFee, setBaseFee] = useState('5.00');
@@ -60,7 +61,6 @@ export default function Onboarding() {
     );
   };
 
-  // Create Unit and finish flow for Owner
   const handleFinishOwner = async () => {
     if (!user) return;
     setLoading(true);
@@ -82,7 +82,7 @@ export default function Onboarding() {
 
       if (unitError) throw unitError;
 
-      // 2. Create owner membership row (enables company-scoped access/features)
+      // 2. Create owner membership row
       const { error: membershipError } = await supabase.from('company_members').insert({
         company_id: unit.id,
         user_id: user.id,
@@ -116,7 +116,7 @@ export default function Onboarding() {
 
       if (profileError) throw profileError;
 
-      // 4. Create mobility settings if home/hybrid
+      // 5. Create mobility settings if home/hybrid
       if (logisticsType === 'home' || logisticsType === 'hybrid') {
         await supabase.from('mobility_settings').insert({
           unit_id: unit.id,
@@ -128,35 +128,11 @@ export default function Onboarding() {
       // Invalidate queries & redirect
       await queryClient.invalidateQueries();
       setStep('done');
-      setTimeout(() => navigate('/dashboard'), 2000);
+      setTimeout(() => navigate('/dashboard', { replace: true }), 2000);
 
     } catch (error) {
       console.error('Onboarding error:', error);
       toast({ variant: 'destructive', title: 'Erro ao configurar a conta', description: 'Por favor, tente novamente.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Staff flow - create join request
-  const handleFinishStaff = async () => {
-    if (!user) return;
-    setLoading(true);
-    try {
-      // For now, just complete onboarding - in future this will create join request
-      await supabase
-        .from('profiles')
-        .update({ 
-          onboarding_completed: true,
-          user_type: 'staff' 
-        })
-        .eq('id', user.id);
-
-      await queryClient.invalidateQueries();
-      setStep('done');
-      setTimeout(() => navigate('/dashboard'), 2000);
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Erro' });
     } finally {
       setLoading(false);
     }
@@ -170,6 +146,8 @@ export default function Onboarding() {
     );
   }
 
+  const stepIndex = ['identity', 'size', 'categories', 'logistics'].indexOf(step);
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -181,103 +159,44 @@ export default function Onboarding() {
               LUMINA OS
             </h1>
             <div className="flex items-center justify-center gap-2">
-              <div className={cn("w-2 h-2 rounded-full transition-all duration-300", 
-                step === 'type' ? "bg-primary w-6" : "bg-primary/20")} />
-              <div className={cn("w-2 h-2 rounded-full transition-all duration-300", 
-                step === 'size' ? "bg-primary w-6" : (step === 'categories' || step === 'logistics' ? "bg-primary" : "bg-primary/20"))} />
-              <div className={cn("w-2 h-2 rounded-full transition-all duration-300", 
-                step === 'categories' ? "bg-primary w-6" : (step === 'logistics' ? "bg-primary" : "bg-primary/20"))} />
-              <div className={cn("w-2 h-2 rounded-full transition-all duration-300", 
-                step === 'logistics' ? "bg-primary w-6" : "bg-primary/20")} />
+              {['identity', 'size', 'categories', 'logistics'].map((s, i) => (
+                <div
+                  key={s}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    i === stepIndex ? "bg-primary w-6" : i < stepIndex ? "bg-primary w-2" : "bg-primary/20 w-2"
+                  )}
+                />
+              ))}
             </div>
           </div>
         )}
 
-        {/* STEP 1: User Type */}
-        {step === 'type' && (
+        {/* STEP 1: Identity — Business Name */}
+        {step === 'identity' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="text-center space-y-2">
               <h2 className="text-xl font-bold">Bem-vindo(a) ao seu novo sistema</h2>
-              <p className="text-muted-foreground text-sm">Como pretende usar o LUMINA OS?</p>
+              <p className="text-muted-foreground text-sm">Qual é o nome do seu negócio?</p>
             </div>
 
-            <div className="grid gap-3">
-              <button
-                onClick={() => setProfileType('owner')}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left hover:scale-[1.01]",
-                  profileType === 'owner' ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                )}
+            <div className="space-y-3">
+              <Label>Nome do negócio</Label>
+              <Input 
+                placeholder="Ex: Barbearia Silva" 
+                value={businessName} 
+                onChange={e => setBusinessName(e.target.value)} 
+                className="h-12" 
+                autoFocus
+              />
+              <Button 
+                className="w-full h-12" 
+                disabled={!businessName.trim()} 
+                onClick={() => setStep('size')}
               >
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  profileType === 'owner' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                )}>
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Criar conta comercial</h3>
-                  <p className="text-xs text-muted-foreground">Sou o dono/gestor de um negócio</p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => setProfileType('staff')}
-                className={cn(
-                  "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left hover:scale-[1.01]",
-                  profileType === 'staff' ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                )}
-              >
-                <div className={cn(
-                  "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  profileType === 'staff' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
-                )}>
-                  <UserCircle2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Participar de empresa existente</h3>
-                  <p className="text-xs text-muted-foreground">Sou um colaborador/prestador</p>
-                </div>
-              </button>
+                Continuar <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </div>
-
-            {profileType === 'owner' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
-                <Label>Nome do seu novo negócio</Label>
-                <Input 
-                  placeholder="Ex: Barbearia Silva" 
-                  value={businessName} 
-                  onChange={e => setBusinessName(e.target.value)} 
-                  className="h-12" 
-                />
-                <Button 
-                  className="w-full h-12" 
-                  disabled={!businessName} 
-                  onClick={() => setStep('size')}
-                >
-                  Continuar <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
-              </div>
-            )}
-
-            {profileType === 'staff' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
-                <Label>Código da Empresa ou Email do Gestor</Label>
-                <Input 
-                  placeholder="Pesquisar..." 
-                  value={joinCode} 
-                  onChange={e => setJoinCode(e.target.value)} 
-                  className="h-12" 
-                />
-                <Button 
-                  className="w-full h-12" 
-                  disabled={!joinCode || loading} 
-                  onClick={handleFinishStaff}
-                >
-                  {loading ? 'A enviar pedido...' : 'Enviar Pedido para Entrar'}
-                </Button>
-              </div>
-            )}
           </div>
         )}
 
@@ -285,7 +204,7 @@ export default function Onboarding() {
         {step === 'size' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-700">
             <button 
-              onClick={() => setStep('type')} 
+              onClick={() => setStep('identity')} 
               className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center transition-colors"
             >
               <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
@@ -306,7 +225,7 @@ export default function Onboarding() {
               >
                 <div className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  businessType === 'solo' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                  businessType === 'solo' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
                   <Briefcase className="w-5 h-5" />
                 </div>
@@ -325,7 +244,7 @@ export default function Onboarding() {
               >
                 <div className={cn(
                   "w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  businessType === 'team' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                  businessType === 'team' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 )}>
                   <Users className="w-5 h-5" />
                 </div>
@@ -366,7 +285,7 @@ export default function Onboarding() {
           </div>
         )}
 
-        {/* STEP 3: Categories (NEW) */}
+        {/* STEP 3: Categories */}
         {step === 'categories' && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-700">
             <button 
@@ -389,7 +308,7 @@ export default function Onboarding() {
                   className={cn(
                     "p-3 rounded-xl text-sm font-medium transition-all hover:scale-105 animate-in fade-in",
                     selectedCategories.includes(category)
-                      ? "bg-primary text-primary-foreground border-2 border-primary glow-primary"
+                      ? "bg-primary text-primary-foreground border-2 border-primary"
                       : "bg-card border border-border hover:border-primary/40 text-muted-foreground"
                   )}
                   style={{ animationDelay: `${i * 40}ms` }}
@@ -439,7 +358,7 @@ export default function Onboarding() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0", 
-                    logisticsType === 'unit' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                    logisticsType === 'unit' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     <Store className="w-4 h-4" />
                   </div>
@@ -458,7 +377,7 @@ export default function Onboarding() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0", 
-                    logisticsType === 'home' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                    logisticsType === 'home' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     <Bike className="w-4 h-4" />
                   </div>
@@ -477,7 +396,7 @@ export default function Onboarding() {
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center shrink-0", 
-                    logisticsType === 'hybrid' ? "bg-primary text-white" : "bg-muted text-muted-foreground"
+                    logisticsType === 'hybrid' ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                   )}>
                     <MapPin className="w-4 h-4" />
                   </div>
@@ -556,8 +475,8 @@ export default function Onboarding() {
         {/* Done State */}
         {step === 'done' && (
           <div className="text-center space-y-6 animate-in fade-in zoom-in-95 duration-700">
-            <div className="w-20 h-20 mx-auto rounded-full bg-success flex items-center justify-center mb-4">
-              <CheckCircle2 className="w-10 h-10 text-white" />
+            <div className="w-20 h-20 mx-auto rounded-full bg-green-500 flex items-center justify-center mb-4">
+              <CheckCircle2 className="w-10 h-10 text-primary-foreground" />
             </div>
             <div>
               <h2 className="text-2xl font-bold mb-2">Tudo configurado!</h2>
