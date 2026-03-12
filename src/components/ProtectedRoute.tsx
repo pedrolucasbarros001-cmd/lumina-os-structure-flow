@@ -56,5 +56,11 @@ export default function ProtectedRoute({ children, requireSetup = true }: Protec
     return <Navigate to="/setup" replace />;
   }
 
+  // Staff route protection: prevent staff from accessing owner-only routes
+  const staffRestrictedRoutes = ['/team', '/unit', '/settings'];
+  if (profile.user_type === 'staff' && staffRestrictedRoutes.includes(location.pathname)) {
+    return <Navigate to="/agenda" replace />;
+  }
+
   return <>{children}</>;
 }
