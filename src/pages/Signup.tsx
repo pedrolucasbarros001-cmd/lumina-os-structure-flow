@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Navigate, Link, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ export default function Signup() {
   const { t } = useTranslation();
   const { signUp, user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const plan = searchParams.get('plan') || 'monthly';
   const [fullName, setFullName] = useState('');
@@ -21,8 +22,9 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // If user is already logged in, send to onboarding (ProtectedRoute will handle the rest)
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/onboarding" replace />;
   }
 
   const planLabel = plan === 'annual' ? 'Anual' : 'Mensal';
@@ -35,7 +37,12 @@ export default function Signup() {
       await signUp(email, password, fullName);
       // Store pending plan for post-confirmation processing
       localStorage.setItem('pending_plan', plan);
-      toast({ title: 'Conta criada!', description: 'Verifique seu e-mail para confirmar.' });
+      toast({
+        title: 'Conta criada!',
+        description: 'Verifique seu e-mail para confirmar a conta e depois faça login.',
+      });
+      // Redirect to login with next=/onboarding so after login they go straight to onboarding
+      navigate('/login?next=/onboarding', { replace: true });
     } catch (error: any) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
