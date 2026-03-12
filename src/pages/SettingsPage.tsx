@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { User, Bell, Shield, ChevronRight, LogOut, Save, X } from 'lucide-react';
+import { User, Bell, Shield, ChevronRight, LogOut, Save, X, Smartphone, Moon, DollarSign, Info } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUnit } from '@/hooks/useUnit';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -48,11 +49,13 @@ function SettingsRow({
 
 export default function SettingsPage() {
   const { data: profile } = useProfile();
+  const { data: unit } = useUnit();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [notifications, setNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
   const [fullName, setFullName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -139,19 +142,68 @@ export default function SettingsPage() {
             sub="Alertas de agendamento"
             right={<Switch checked={notifications} onCheckedChange={setNotifications} />}
           />
+          <SettingsRow
+            icon={Moon}
+            label="Modo Escuro"
+            sub="Tema automático (atual: Ativo)"
+            right={<Switch checked={darkMode} onCheckedChange={setDarkMode} />}
+          />
+          <SettingsRow
+            icon={DollarSign}
+            label="Moeda"
+            sub="€ EUR (Portugal)"
+          />
         </div>
       </section>
+
+      {/* Company Info (if owner) */}
+      {profile?.user_type === 'owner' && (
+        <section>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 px-1">Empresa</p>
+          <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-2">
+            <div>
+              <p className="text-xs text-muted-foreground">Nome</p>
+              <p className="text-sm font-medium">{unit?.name || 'Sua Empresa'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Tipo de Negócio</p>
+              <p className="text-sm font-medium capitalize">{unit?.business_type === 'team' ? 'Com Equipa' : 'Solo'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Plano</p>
+              <p className="text-sm font-medium">Trial (14 dias)</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Account */}
       <section>
         <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 px-1">Conta</p>
         <div className="bg-card border border-border/50 rounded-2xl overflow-hidden divide-y divide-border/30">
-          <SettingsRow icon={User} label="Perfil" sub="Editar nome" onClick={handleEditProfile} />
+          <SettingsRow icon={User} label="Perfil" sub="Editar nome e informações" onClick={handleEditProfile} />
           <SettingsRow
             icon={Shield}
             label="Segurança"
             sub={sendingReset ? 'A enviar...' : 'Alterar palavra-passe'}
             onClick={handleResetPassword}
+          />
+          <SettingsRow
+            icon={Smartphone}
+            label="E-mail"
+            sub={user?.email || 'Sem email'}
+          />
+        </div>
+      </section>
+
+      {/* About */}
+      <section>
+        <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 px-1">Sobre</p>
+        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden divide-y divide-border/30">
+          <SettingsRow
+            icon={Info}
+            label="Versão"
+            sub="LUMINA OS v1.0.0"
           />
         </div>
       </section>

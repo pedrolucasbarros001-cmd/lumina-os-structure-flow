@@ -33,7 +33,7 @@ interface SelectedService {
 
 export default function NewAppointmentSheet({ open, onClose, prefillDate, prefillTime, prefillTeamMemberId }: NewAppointmentSheetProps) {
   const navigate = useNavigate();
-  const { isStaff } = useUserContext();
+  const { isStaff, teamMemberId: staffTeamMemberId } = useUserContext();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
   const { data: teamMembers = [] } = useTeamMembers();
@@ -46,7 +46,7 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
 
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; email?: string | null } | null>(null);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
-  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState(prefillTeamMemberId || '');
+  const [selectedTeamMemberId, setSelectedTeamMemberId] = useState(prefillTeamMemberId || (isStaff && staffTeamMemberId ? staffTeamMemberId : ''));
 
   const datetime = useMemo(() => {
     if (prefillTime) return prefillTime;
@@ -108,13 +108,21 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
   };
 
   const handleSubmit = async () => {
+    if (!selectedTeamMemberId) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Selecione um profissional para a marcação.' });
+      return;
+    }
+    if (selectedServices.length === 0) {
+      toast({ variant: 'destructive', title: 'Erro', description: 'Selecione pelo menos um serviço.' });
+      return;
+    }
     try {
       await createAppointment.mutateAsync({
         client_id: selectedClient?.id || null,
         client_name: selectedClient?.name || 'Sem reserva',
         client_phone: null,
         service_ids: selectedServices.map(s => s.id),
-        team_member_id: selectedTeamMemberId || null,
+        team_member_id: selectedTeamMemberId,
         datetime,
         duration: totalDuration || 60,
         value: totalPrice,
@@ -125,8 +133,8 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
       });
       toast({ title: 'Reserva criada!', description: 'Agendamento adicionado com sucesso.' });
       onClose();
-    } catch {
-      toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar a reserva.' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: error?.message || 'Não foi possível criar a reserva.' });
     }
   };
 
@@ -315,6 +323,23 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                   <Repeat className="w-4 h-4" />
                   <span>Não se repete</span>
                 </div>
+              </div>
+
+              {/* Professional selector */}
+              <div className="px-4 py-3 border-b border-border/30">
+                <label className="text-xs text-muted-foreground uppercase tracking-widest font-medium block mb-2">Profissional</label>
+                <select
+                  value={selectedTeamMemberId}
+                  onChange={(e) => setSelectedTeamMemberId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-muted/50 border border-border/30 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">-- Selecionar profissional --</option>
+                  {teamMembers.map(tm => (
+                    <option key={tm.id} value={tm.id}>
+                      {tm.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="px-4 py-3 border-b border-border/30">

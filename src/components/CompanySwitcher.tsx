@@ -1,11 +1,13 @@
 import { ChevronDown, Building2, Plus } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { PaywallModal } from '@/components/PaywallModal';
 import { cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
 
 export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
   const { companies, activeCompanyId, setActiveCompanyId, subscription } = useCompany();
   const [open, setOpen] = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const active = companies.find(c => c.id === activeCompanyId);
@@ -23,7 +25,17 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
 
   const planLabel = subscription?.plan_type === 'annual' ? 'Anual' : 'Mensal';
   const maxCompanies = subscription?.plan_type === 'annual' ? 3 : 1;
-  const canAddMore = companies.filter(c => c.role === 'owner').length < maxCompanies;
+  const ownerCompanies = companies.filter(c => c.role === 'owner').length;
+  const canAddMore = ownerCompanies < maxCompanies;
+
+  const handleAddCompany = () => {
+    if (!canAddMore) {
+      setPaywallOpen(true);
+      setOpen(false);
+    } else {
+      // TODO: Navigate to create company flow
+    }
+  };
 
   if (collapsed) {
     return (
@@ -89,15 +101,40 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
           ))}
 
           {canAddMore && (
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-all haptic-press text-muted-foreground mt-1 border-t border-border/30 pt-2">
+            <button
+              onClick={handleAddCompany}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted/50 transition-all haptic-press text-muted-foreground mt-1 border-t border-border/30 pt-2"
+            >
               <div className="w-7 h-7 rounded-lg bg-muted/50 flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </div>
               <span className="text-sm">Nova empresa</span>
             </button>
           )}
+
+          {!canAddMore && (
+            <button
+              onClick={handleAddCompany}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-destructive/10 transition-all haptic-press text-destructive/70 mt-1 border-t border-border/30 pt-2"
+            >
+              <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <Plus className="w-4 h-4" />
+              </div>
+              <span className="text-sm">Nova empresa (bloqueado)</span>
+            </button>
+          )}
         </div>
       )}
+
+      {/* Paywall Modal */}
+      <PaywallModal
+        open={paywallOpen}
+        onClose={() => setPaywallOpen(false)}
+        type="units"
+        currentPlan={subscription?.plan_type || 'monthly'}
+        current={ownerCompanies}
+        limit={maxCompanies}
+      />
     </div>
   );
 }

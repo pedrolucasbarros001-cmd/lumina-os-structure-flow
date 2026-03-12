@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Plus, Clock, DollarSign, Home, Building2, ToggleLeft, ToggleRight, Scissors } from 'lucide-react';
-import { useServices, Service, useCreateService, useUpdateService } from '@/hooks/useServices';
+import { Plus, Clock, DollarSign, Home, Building2, ToggleLeft, ToggleRight, Scissors, Trash2 } from 'lucide-react';
+import { useServices, Service, useCreateService, useUpdateService, useDeleteService } from '@/hooks/useServices';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -62,11 +62,26 @@ function AddServiceSheet({ open, onClose }: { open: boolean; onClose: () => void
 
 function ServiceCard({ service }: { service: Service }) {
   const updateService = useUpdateService();
+  const deleteService = useDeleteService();
   const { toast } = useToast();
+  const [deleting, setDeleting] = useState(false);
 
   const toggle = async () => {
     await updateService.mutateAsync({ id: service.id, is_active: !service.is_active });
     toast({ title: service.is_active ? 'Serviço desativado.' : 'Serviço ativado.' });
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Tem certeza que deseja eliminar "${service.name}"?\nEsta ação não pode ser desfeita.`)) return;
+    setDeleting(true);
+    try {
+      await deleteService.mutateAsync(service.id);
+      toast({ title: 'Serviço eliminado' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro ao eliminar serviço' });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -87,9 +102,14 @@ function ServiceCard({ service }: { service: Service }) {
         </div>
         <div className="flex flex-col items-end gap-2 shrink-0">
           <span className="text-lg font-bold text-primary">€{service.price.toFixed(2)}</span>
-          <button onClick={toggle} className="text-muted-foreground hover:text-foreground transition-colors">
-            {service.is_active ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <button onClick={toggle} className="text-muted-foreground hover:text-foreground transition-colors">
+              {service.is_active ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6" />}
+            </button>
+            <button onClick={handleDelete} disabled={deleting} className="text-muted-foreground hover:text-destructive transition-colors">
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

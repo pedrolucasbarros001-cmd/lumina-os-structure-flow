@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Home, Users, Mail, Send, Copy, Check, Lock, Crown, Clock, X } from 'lucide-react';
+import { Plus, Home, Users, Mail, Send, Copy, Check, Lock, Crown, Clock, X, Trash2 } from 'lucide-react';
 import { useTeamMembers, TeamMember, useCreateTeamMember } from '@/hooks/useTeamMembers';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useUnit } from '@/hooks/useUnit';
@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { PaywallModal } from '@/components/PaywallModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -87,41 +87,6 @@ function useStaffLimit() {
     },
     enabled: !!user && !!unit,
   });
-}
-
-function PaywallModal({ open, onClose, current, limit }: { open: boolean; onClose: () => void; current: number; limit: number }) {
-  return (
-    <Dialog open={open} onOpenChange={o => !o && onClose()}>
-      <DialogContent className="frosted-glass max-w-sm mx-auto">
-        <DialogHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-warning/20 flex items-center justify-center">
-            <Lock className="w-8 h-8 text-warning" />
-          </div>
-          <DialogTitle className="text-xl">Limite de equipa atingido</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            O seu plano Mensal permite até {limit} colaboradores.
-            Atualmente tem {current} membro{current !== 1 ? 's' : ''}.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3 mt-4">
-          <div className="glass-card p-4 text-center">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Crown className="w-5 h-5 text-primary" />
-              <span className="font-semibold">Plano Anual</span>
-            </div>
-            <p className="text-sm text-muted-foreground mb-1">Colaboradores ilimitados</p>
-            <p className="text-2xl font-bold text-primary">€64,75<span className="text-sm text-muted-foreground font-normal">/mês</span></p>
-          </div>
-          <Button className="w-full" onClick={onClose}>
-            Fazer Upgrade
-          </Button>
-          <Button variant="ghost" className="w-full" onClick={onClose}>
-            Voltar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 function NewMemberSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -372,7 +337,9 @@ function NewMemberSheet({ open, onClose }: { open: boolean; onClose: () => void 
 
 function PendingInvitationCard({ invitation }: { invitation: any }) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const expiresIn = Math.ceil(
     (new Date(invitation.expires_at).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
@@ -384,6 +351,24 @@ function PendingInvitationCard({ invitation }: { invitation: any }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast({ title: 'Link copiado!' });
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Tem certeza que pretende cancelar este convite?')) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('staff_invitations')
+        .delete()
+        .eq('id', invitation.id);
+      if (error) throw error;
+      toast({ title: 'Convite cancelado' });
+      queryClient.invalidateQueries({ queryKey: ['pending_invitations'] });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro ao cancelar convite' });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const displayName = invitation.name || invitation.email;
@@ -412,18 +397,51 @@ function PendingInvitationCard({ invitation }: { invitation: any }) {
           Expira em {expiresIn} dia{expiresIn !== 1 ? 's' : ''}
         </div>
       </div>
-      <Button size="icon" variant="outline" onClick={copyLink}>
-        {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button size="icon" variant="outline" onClick={copyLink}>
+          {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={handleDelete}
+          disabled={deleting}
+          className="text-destructive hover:text-destructive"
+        >
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 }
 
 function MemberCard({ member }: { member: TeamMember }) {
   const { data: appointments = [] } = useAppointments();
+  const queryClient = useQueryClient();
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
+  
   const memberAppts = appointments.filter(a => a.team_member_id === member.id && a.status === 'completed');
   const revenue = memberAppts.reduce((s, a) => s + (a.value || 0), 0);
   const initials = member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  const handleDelete = async () => {
+    if (!confirm(`Tem certeza que deseja remover ${member.name} da equipa?`)) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', member.id);
+      if (error) throw error;
+      toast({ title: 'Membro removido da equipa' });
+      queryClient.invalidateQueries({ queryKey: ['team_members'] });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erro ao remover membro' });
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="glass-card p-4 flex items-center gap-4">
@@ -443,6 +461,15 @@ function MemberCard({ member }: { member: TeamMember }) {
           {revenue > 0 && <span className="text-primary font-semibold">€{revenue.toFixed(0)}</span>}
         </div>
       </div>
+      <Button
+        size="icon"
+        variant="outline"
+        onClick={handleDelete}
+        disabled={deleting}
+        className="text-destructive hover:text-destructive"
+      >
+        <Trash2 className="w-4 h-4" />
+      </Button>
     </div>
   );
 }
@@ -522,6 +549,8 @@ export default function Team() {
       <PaywallModal
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
+        type="staff"
+        currentPlan={staffLimit?.plan === 'annual' ? 'annual' : 'monthly'}
         current={staffLimit?.current || 0}
         limit={staffLimit?.limit || 4}
       />
