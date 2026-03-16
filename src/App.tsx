@@ -22,7 +22,7 @@ import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
-import ProgressiveSetup from "./pages/ProgressiveSetup";
+// ProgressiveSetup removed — merged into Onboarding
 import PublicBooking from "./pages/PublicBooking";
 import PlanSelection from "./pages/PlanSelection";
 import StaffInvite from "./pages/StaffInvite";
