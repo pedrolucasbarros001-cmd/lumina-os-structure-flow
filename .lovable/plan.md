@@ -1,66 +1,129 @@
 
 
-# Plano: Correcção Global — Onboarding, Agenda e Estabilidade Funcional
+# LUMINA OS — Full Implementation Plan
 
-## Diagnóstico
+## Overview
+LUMINA OS is an operational system for service units (clinics, studios, barbershops). It manages structure, smart scheduling, team-service compatibility, manual approval, analytics, and mobility (home visits). The UI will be dark-first, multi-language (PT/EN), and follow an 8px grid with smooth transitions.
 
-Após varredura completa do código, identifiquei **4 problemas críticos** e **3 melhorias de UX** necessários:
+---
 
-### Problemas Críticos
+## Phase 1: Foundation & Database
 
-**1. Onboarding bloqueado pelo `setup_completed` gate**
-O `ProtectedRoute` (linhas 50-57) verifica `setup_completed` e redireciona para `/setup` APÓS o onboarding concluir. Mas o onboarding (`Onboarding.tsx` linha 121) define `onboarding_completed: true` sem definir `setup_completed: true`. Resultado: utilizador fica preso no `/setup` (ProgressiveSetup) antes de poder usar a agenda. O utilizador quer que o onboarding seja o processo completo — sem fase separada de setup.
+### Database Schema (Supabase)
+- **units** — name, logo, cover, address, phone, hours, accepts_home_visits
+- **services** — name, duration, price, description, image, unit_id
+- **team_members** — user_id, unit_id, name, photo, role, bio, accepts_home_visits
+- **team_member_services** — links team members to services they perform
+- **clients** — name, phone, email, unit_id (created only on confirmed appointment)
+- **appointments** — client_id, unit_id, service(s), team_member_id, datetime, type (unit/home), status (pending_approval, confirmed, completed, cancelled, no_show), value, address
+- **mobility_settings** — unit_id, base_fee, price_per_km
+- **user_roles** — user_id, role (owner, team_member) with RLS
 
-**Solução**: Fundir o ProgressiveSetup dentro do Onboarding. O wizard ficará com 6 etapas: Identity → Size → Categories → Logistics → Primeiro Serviço → Horários. No final, definir `onboarding_completed = true` E `setup_completed = true`. Remover o gate de `/setup` do ProtectedRoute.
+### Auth
+- Email + password authentication via Supabase Auth
+- Profile table linked to auth.users
+- Role-based access: owner vs team member
 
-**2. Clicar nos cards de agendamento não funciona**
-Em `Agenda.tsx`, o `handleApptLongPressStart` (linha 339) chama `e.preventDefault()` no `pointerdown`, o que impede o evento `click` de disparar no browser. Resultado: tocar num card não abre o `AppointmentDetailSheet`.
+### Multi-language
+- i18n system with PT and EN, language switcher in settings
 
-**Solução**: Remover `e.preventDefault()` do `handleApptLongPressStart`. Manter apenas `e.stopPropagation()`. O `preventDefault` só deve ser chamado quando o drag realmente inicia (dentro do timeout de 300ms).
+---
 
-**3. Criação de serviço a partir da Agenda falha silenciosamente**
-O `NewAppointmentSheet` requer `selectedTeamMemberId`, mas para owners solo (sem team_members criados), o campo fica vazio e o submit é bloqueado pela validação (linha 111). Quando o owner tem team_members (inclui a si próprio criado no onboarding), o auto-select não funciona porque o `useEffect` na abertura (linha 66) reseta `selectedTeamMemberId` para `prefillTeamMemberId || ''`.
+## Phase 2: Onboarding Flow (5 Steps)
 
-**Solução**: Auto-selecionar o primeiro team member quando só existe um. Se o owner é solo, preencher automaticamente.
+A guided wizard that blocks access to the panel until complete:
 
-**4. Grid `onPointerDown` com `e.preventDefault()` incondicional**
-Linha 231 do `Agenda.tsx` — impede interação normal com a grid (scroll, taps). Causa conflitos em mobile.
+1. **Create Unit** — name, logo, cover, address, phone, hours, home visits toggle
+2. **Service Catalog** — add services (min 1 required), each with name, duration, price, description
+3. **Team** — invite members, assign roles, link services, set home visit capability (min 1 member with 1 service)
+4. **Mobility** — if home visits enabled: base fee + price/km
+5. **Publish** — validation check (1 active service, 1 active member, hours configured), then publish public booking page
 
-**Solução**: Remover `e.preventDefault()` do grid pointerdown. Usar `touch-action: manipulation` (já está) e só prevenir default quando o drag inicia.
+---
 
-### Melhorias UX
+## Phase 3: Internal Panel
 
-**5. Cards da agenda demasiado largos para solo owner**
-O cálculo de largura das colunas usa `columns.length` mas distribui por toda a largura do ecrã. Com 1 membro, a coluna ocupa 100% — desperdiçando espaço.
+### Layout
+- Dark-themed sidebar with exactly 8 items: Dashboard, Agenda, Atendimentos, Clientes, Equipa, Serviços, Unidade, Configurações
+- Collapsible sidebar with icons
+- Active route highlighting
 
-**Solução**: Limitar a largura máxima da coluna (ex: `max-width: 400px` para solo). Centralizar a coluna quando é apenas 1. Para 2+, manter distribuição proporcional mas com cap de `min(columns.length, 4)`.
+### Agenda (Daily Operations)
+- Vertical time grid with columns per team member
+- Minimalist appointment cards showing client name + colored status bar
+- Drag & drop to reschedule, resize to adjust duration
+- Click opens a detailed side drawer with full appointment info and action buttons
+- No metrics or revenue on this view — pure operations
 
-**6. Cards de agendamento compactos**
-Os blocos de visita usam `HOUR_HEIGHT = 80px`. Para 30min de serviço, o card fica com 40px — razoável. Mas visualmente os paddings podem ser mais tight.
+### Atendimentos (Appointments Management)
+- Table with advanced filters: client, service, team member, date, type, status, value
+- Click opens drawer: client data, address (if home), services, status history, action buttons
 
-**Solução**: Reduzir padding interno dos blocos (`px-1.5 py-1`), `HOUR_HEIGHT` para 72px para uma grade mais densa.
+### Clientes
+- Clients appear only after a CONFIRMED appointment
+- Table: name, phone, email, total appointments, accumulated revenue, last visit
+- Click opens drawer with full history
 
-**7. Onboarding completo num único wizard**
-Fundir as etapas do ProgressiveSetup (criar serviço + horários) no Onboarding, ficando:
-1. Nome do negócio (identity)
-2. Solo vs Equipa (size)
-3. Categorias (categories)
-4. Logística (logistics)
-5. Criar primeiro serviço (service)
-6. Horários de funcionamento (hours)
-→ Conclusão: ambas flags `true`, redireciona para `/agenda`
+### Equipa
+- List: photo, name, role, home visits, linked services
+- Click opens drawer: bio, services, revenue, avg occupancy, cancellation %, home/unit split
 
-## Ficheiros a Alterar
+### Serviços
+- List: name, duration, price, # of team members, total sold, revenue
+- Click opens drawer with service analytics
 
-| Ficheiro | Alteração |
-|----------|-----------|
-| `src/pages/Onboarding.tsx` | Adicionar etapas 5 (serviço) e 6 (horários), definir `setup_completed: true` no final |
-| `src/components/ProtectedRoute.tsx` | Remover gate do `/setup` — tudo é tratado pelo onboarding |
-| `src/pages/Agenda.tsx` | Fix `preventDefault` nos pointerdown handlers; cards compactos; coluna adaptativa |
-| `src/components/NewAppointmentSheet.tsx` | Auto-selecionar team member quando existe apenas 1 |
-| `src/pages/Catalogo.tsx` | Garantir que criação de serviço funciona (já funciona, mas validar RLS para staff) |
+### Unidade
+- Edit unit details (same fields as onboarding step 1)
 
-## Notas sobre o PRD V2.0
+### Configurações
+- Mobility settings, language, public page settings
 
-O documento V2.0 está registado. As implementações de Stripe (Sprint A), Google Maps live tracking (Sprint B), e Supabase Realtime estão agendadas para sprints futuros. Este plano foca-se em **estabilizar a fundação** antes de avançar para essas camadas.
+---
+
+## Phase 4: Dashboard (Analytics)
+
+### Overview Cards
+- Total revenue, appointments count, occupancy rate, avg ticket, cancellation %, home visit %
+
+### Team Performance
+- Table with per-member metrics + detailed drawer
+
+### Service Performance
+- Table with per-service metrics + detailed drawer
+
+### Schedule Structure
+- Occupancy heatmap
+- Most profitable time slot
+- Most profitable day
+
+### Global Filters
+- Date range, team member, service type
+
+---
+
+## Phase 5: Public Booking Page
+
+### Sequential Flow
+1. Select services from catalog
+2. Select compatible team member (must perform ALL selected services; must accept home visits if applicable)
+3. Select valid time slot (no conflicts, within business hours)
+4. Choose type: Unit or Home visit
+5. Enter client details (name, phone, email, address if home)
+6. Confirmation screen
+
+### Rules
+- Never show invalid slots
+- Never allow incompatible member selection
+- Appointment created with status `PENDING_APPROVAL`
+- Owner approves/rejects from the panel
+
+---
+
+## UX Principles Applied Throughout
+- Dark-first theme with carefully chosen accent colors
+- 8px spacing grid, consistent border-radius
+- Smooth transitions (120–280ms), no bounce effects
+- Minimal visual noise — one insight at a time
+- System prevents errors rather than explaining them
+- Drawers for detail views instead of page navigation
 

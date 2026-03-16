@@ -70,9 +70,11 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
       setSelectedServices([]);
       setClientSearch('');
       setServiceSearch('');
-      setSelectedTeamMemberId(prefillTeamMemberId || '');
+      // Auto-select: prefill > staff own > sole team member
+      const autoMember = prefillTeamMemberId || (isStaff && staffTeamMemberId ? staffTeamMemberId : (teamMembers.length === 1 ? teamMembers[0].id : ''));
+      setSelectedTeamMemberId(autoMember);
     }
-  }, [open, prefillTeamMemberId]);
+  }, [open, prefillTeamMemberId, isStaff, staffTeamMemberId, teamMembers]);
 
   const filteredClients = useMemo(() => {
     if (!clientSearch) return clients;

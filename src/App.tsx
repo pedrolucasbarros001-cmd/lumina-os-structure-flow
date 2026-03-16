@@ -22,7 +22,7 @@ import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
-import ProgressiveSetup from "./pages/ProgressiveSetup";
+// ProgressiveSetup removed — merged into Onboarding
 import PublicBooking from "./pages/PublicBooking";
 import PlanSelection from "./pages/PlanSelection";
 import StaffInvite from "./pages/StaffInvite";
@@ -60,8 +60,8 @@ const App = () => (
             {/* Onboarding (Phase 1) */}
             <Route path="/onboarding" element={<ProtectedRoute requireSetup={false}><Onboarding /></ProtectedRoute>} />
 
-            {/* Progressive Setup (Phase 2 - no sidebar) */}
-            <Route path="/setup" element={<ProtectedRoute requireSetup={false}><ProgressiveSetup /></ProtectedRoute>} />
+            {/* Legacy /setup redirects to agenda */}
+            <Route path="/setup" element={<Navigate to="/agenda" replace />} />
 
             {/* Protected panel routes */}
             <Route element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>
