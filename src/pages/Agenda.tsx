@@ -335,7 +335,6 @@ export default function Agenda() {
   // ─── Long press on appointment (start drag) ───
   const handleApptLongPressStart = useCallback((e: React.PointerEvent, appt: Appointment) => {
     e.stopPropagation();
-    e.preventDefault();
     longPressStartPos.current = { x: e.clientX, y: e.clientY };
     longPressTimer.current = setTimeout(() => {
       isDragging.current = true;
