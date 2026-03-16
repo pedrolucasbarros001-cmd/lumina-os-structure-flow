@@ -461,11 +461,11 @@ export default function Agenda() {
         </div>
 
         {/* Team member row */}
-        <div className="flex items-center gap-0 overflow-x-auto scrollbar-none">
+        <div className={cn("flex items-center gap-0 overflow-x-auto scrollbar-none", columns.length === 1 && "justify-center")}>
           <div style={{ width: TIME_LABEL_WIDTH }} className="shrink-0" />
           {columns.map(col => (
             <div key={col.id} className="flex flex-col items-center gap-1 shrink-0"
-              style={{ width: `calc((100vw - ${TIME_LABEL_WIDTH}px - 2rem) / ${Math.min(columns.length, 4)})` }}>
+              style={{ width: columns.length === 1 ? 'min(400px, calc(100vw - 56px - 2rem))' : `calc((100vw - ${TIME_LABEL_WIDTH}px - 2rem) / ${Math.min(columns.length, 4)})` }}>
               <Avatar className="w-8 h-8">
                 {col.photo_url && <AvatarImage src={col.photo_url} />}
                 <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
