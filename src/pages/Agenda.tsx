@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 
-const HOUR_HEIGHT = 80;
+const HOUR_HEIGHT = 72;
 const START_HOUR = 0;
 const END_HOUR = 24;
 const TIME_LABEL_WIDTH = 56;
