@@ -25,12 +25,13 @@ export default function DeliveryMap({
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || !process.env.VITE_MAPBOX_PUBLIC_TOKEN) {
+    const mapboxToken = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
+    if (!mapContainer.current || !mapboxToken) {
       console.error('Mapbox token not found');
       return;
     }
 
-    mapboxgl.accessToken = process.env.VITE_MAPBOX_PUBLIC_TOKEN;
+    mapboxgl.accessToken = mapboxToken;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,

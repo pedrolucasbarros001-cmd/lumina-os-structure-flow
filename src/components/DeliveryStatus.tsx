@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Phone, MapPin, Package, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { Delivery } from '@/hooks/useDelivery';
@@ -60,9 +59,9 @@ export default function DeliveryStatus({
           <CardTitle className="text-lg">
             Entrega para {delivery.customer_name}
           </CardTitle>
-          <Badge className={getStatusColor(delivery.status)}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusColor(delivery.status)}`}>
             {getStatusLabel(delivery.status)}
-          </Badge>
+          </span>
         </div>
       </CardHeader>
 

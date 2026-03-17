@@ -181,7 +181,7 @@ export default function Delivery() {
             />
 
             {/* Debug info (remove em produção) */}
-            {process.env.NODE_ENV === 'development' && driverLocation && (
+            {import.meta.env.DEV && driverLocation && (
               <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-600 font-mono">
                 <p>Lat: {driverLocation.latitude.toFixed(5)}</p>
                 <p>Lon: {driverLocation.longitude.toFixed(5)}</p>
