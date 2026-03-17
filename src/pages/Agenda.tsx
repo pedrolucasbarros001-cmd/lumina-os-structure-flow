@@ -29,6 +29,7 @@ const STATUS_STYLES: Record<string, { bg: string, text: string }> = {
   arrived: { bg: '#34d399', text: '#064e3b' }, // emerald-400
   completed: { bg: '#94a3b8', text: '#0f172a' }, // slate-400
   cancelled: { bg: '#f87171', text: '#450a0a' }, // red-400
+  no_show: { bg: '#fb923c', text: '#5a2e00' }, // orange-400
 };
 
 function getInitials(name: string) {

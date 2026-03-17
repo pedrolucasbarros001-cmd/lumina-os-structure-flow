@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Plus, Home, Users, Mail, Send, Copy, Check, Lock, Crown, Clock, X, Trash2 } from 'lucide-react';
+import { Plus, Home, Users, Mail, Send, Copy, Check, Lock, Crown, Clock, X, Trash2, Edit2 } from 'lucide-react';
 import { useTeamMembers, TeamMember, useCreateTeamMember } from '@/hooks/useTeamMembers';
+import { useTeamMemberServices, useUpdateTeamMemberServices } from '@/hooks/useTeamMemberServices';
+import { useServices } from '@/hooks/useServices';
 import { useAppointments } from '@/hooks/useAppointments';
 import { useUnit } from '@/hooks/useUnit';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
 // Hook to check pending invitations
@@ -415,7 +418,88 @@ function PendingInvitationCard({ invitation }: { invitation: any }) {
   );
 }
 
-function MemberCard({ member }: { member: TeamMember }) {
+function MemberServicesSheet({ open, onClose, member }: { open: boolean; onClose: () => void; member: TeamMember | null }) {
+  const { data: services = [] } = useServices();
+  const { data: selectedServiceIds = [] } = useTeamMemberServices(member?.id);
+  const updateServices = useUpdateTeamMemberServices();
+  const { toast } = useToast();
+  const [localSelected, setLocalSelected] = useState<string[]>([]);
+
+  useState(() => {
+    if (open && member) {
+      setLocalSelected(selectedServiceIds);
+    }
+  }, [open, member, selectedServiceIds]);
+
+  const handleSave = async () => {
+    if (!member) return;
+    try {
+      await updateServices.mutateAsync({
+        teamMemberId: member.id,
+        serviceIds: localSelected,
+      });
+      toast({ title: 'Serviços atualizados!' });
+      onClose();
+    } catch (error: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Erro ao atualizar serviços',
+        description: error?.message 
+      });
+    }
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={o => !o && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[80vh]">
+        <SheetHeader className="mb-4">
+          <SheetTitle>Editar Serviços de {member?.name}</SheetTitle>
+        </SheetHeader>
+
+        <div className="space-y-3 mb-6">
+          {services.filter(s => s.is_active).map(service => (
+            <div key={service.id} className="flex items-center gap-3 p-3 rounded-xl border border-border/50 hover:bg-muted/30">
+              <Checkbox
+                checked={localSelected.includes(service.id)}
+                onCheckedChange={checked => {
+                  if (checked) {
+                    setLocalSelected([...localSelected, service.id]);
+                  } else {
+                    setLocalSelected(localSelected.filter(id => id !== service.id));
+                  }
+                }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">{service.name}</p>
+                <p className="text-xs text-muted-foreground">{service.duration}min • €{service.price.toFixed(2)}</p>
+              </div>
+            </div>
+          ))}
+          {services.filter(s => s.is_active).length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum serviço ativo</p>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            className="flex-1" 
+            onClick={handleSave}
+            disabled={updateServices.isPending}
+          >
+            {updateServices.isPending ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const MemberCardWrapper = ({ member }: { member: TeamMember }) => {
+  const [editServicesOpen, setEditServicesOpen] = useState(false);
+  const { data: memberServices = [] } = useTeamMemberServices(member.id);
   const { data: appointments = [] } = useAppointments();
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -444,35 +528,57 @@ function MemberCard({ member }: { member: TeamMember }) {
   };
 
   return (
-    <div className="glass-card p-4 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-sm font-bold shrink-0">
-        {initials}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-semibold truncate">{member.name}</p>
-          {member.accepts_home_visits && (
-            <Home className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+    <>
+      <div className="glass-card p-4 flex items-center gap-4">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-sm font-bold shrink-0">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <p className="font-semibold truncate">{member.name}</p>
+            {member.accepts_home_visits && (
+              <Home className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">{member.role}</p>
+          {memberServices.length > 0 && (
+            <p className="text-xs text-primary mt-1">
+              {memberServices.length} serviço{memberServices.length !== 1 ? 's' : ''}
+            </p>
           )}
+          <div className="flex items-center gap-3 mt-1 text-xs">
+            <span className="text-muted-foreground">{memberAppts.length} atendimentos</span>
+            {revenue > 0 && <span className="text-primary font-semibold">€{revenue.toFixed(0)}</span>}
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">{member.role}</p>
-        <div className="flex items-center gap-3 mt-1 text-xs">
-          <span className="text-muted-foreground">{memberAppts.length} atendimentos</span>
-          {revenue > 0 && <span className="text-primary font-semibold">€{revenue.toFixed(0)}</span>}
+        <div className="flex gap-1">
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => setEditServicesOpen(true)}
+          >
+            <Edit2 className="w-4 h-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
-      <Button
-        size="icon"
-        variant="outline"
-        onClick={handleDelete}
-        disabled={deleting}
-        className="text-destructive hover:text-destructive"
-      >
-        <Trash2 className="w-4 h-4" />
-      </Button>
-    </div>
+      
+      <MemberServicesSheet 
+        open={editServicesOpen} 
+        onClose={() => setEditServicesOpen(false)}
+        member={member}
+      />
+    </>
   );
-}
+};
 
 export default function Team() {
   const { data: teamMembers = [], isLoading } = useTeamMembers();
@@ -524,7 +630,7 @@ export default function Team() {
             {/* Active Members Section */}
             <div className="mb-6">
               {teamMembers.map(m => (
-                <MemberCard key={m.id} member={m} />
+                <MemberCardWrapper key={m.id} member={m} />
               ))}
             </div>
 

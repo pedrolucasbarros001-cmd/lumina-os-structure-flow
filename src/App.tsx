@@ -27,6 +27,7 @@ import PublicBooking from "./pages/PublicBooking";
 import PlanSelection from "./pages/PlanSelection";
 import StaffInvite from "./pages/StaffInvite";
 import Vendas from "./pages/Vendas";
+import Delivery from "./pages/Delivery";
 
 const queryClient = new QueryClient();
 
@@ -53,6 +54,9 @@ const App = () => (
             
             {/* Staff invite (no auth required) */}
             <Route path="/invite/:token" element={<StaffInvite />} />
+
+            {/* Delivery tracking (no auth required - public link) */}
+            <Route path="/delivery/:deliveryId" element={<Delivery />} />
 
             {/* Plan selection page */}
             <Route path="/plans" element={<PlanSelection />} />

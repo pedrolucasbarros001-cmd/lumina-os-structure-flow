@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, Building2 } from 'lucide-react';
 import QuickActionSheet from '@/components/QuickActionSheet';
+import { useUnit } from '@/hooks/useUnit';
 import { cn } from '@/lib/utils';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -23,6 +24,7 @@ export default function PanelLayout() {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] ?? 'LUMINA OS';
   const isAgenda = location.pathname === '/agenda';
+  const { unit } = useUnit();
 
   return (
     <SidebarProvider>
@@ -30,11 +32,21 @@ export default function PanelLayout() {
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           {!isAgenda && (
-            <header className="h-14 flex items-center border-b border-border/30 px-4 gap-3 sticky top-0 z-30 glass-surface">
-              <SidebarTrigger className="shrink-0" />
-              <div className="flex-1 min-w-0">
-                <h1 className="text-base font-semibold truncate">{title}</h1>
+            <header className="flex flex-col border-b border-border/30 sticky top-0 z-30 glass-surface">
+              <div className="h-14 flex items-center px-4 gap-3">
+                <SidebarTrigger className="shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-base font-semibold truncate">{title}</h1>
+                </div>
               </div>
+              {unit && (
+                <div className="border-t border-border/20 px-4 py-2 bg-muted/40">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="font-medium">Filial: {unit.name}</span>
+                  </div>
+                </div>
+              )}
             </header>
           )}
 

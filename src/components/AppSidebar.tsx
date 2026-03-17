@@ -41,7 +41,7 @@ const NAV_ITEMS = [
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const { signOut } = useAuth();
   const { data: unit } = useUnit();
@@ -56,6 +56,12 @@ export function AppSidebar() {
 
     return true;
   });
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="glass-surface border-r border-border/30">
@@ -74,6 +80,7 @@ export function AppSidebar() {
                       end
                       className="hover:bg-sidebar-accent/50 transition-smooth haptic-press rounded-xl"
                       activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      onClick={handleNavClick}
                     >
                       <item.icon className="mr-2 h-4 w-4 shrink-0" />
                       {!collapsed && <span>{item.label}</span>}

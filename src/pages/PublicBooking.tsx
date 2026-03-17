@@ -222,8 +222,46 @@ export default function PublicBooking() {
     setError('');
     try {
       const datetime = `${format(selectedDate!, 'yyyy-MM-dd')}T${selectedTime}:00`;
+
+      // Check if client already exists (by email or phone)
+      let clientId: string | null = null;
+      if (clientEmail || clientPhone) {
+        let query = supabase
+          .from('clients')
+          .select('id')
+          .eq('unit_id', unit.id);
+
+        if (clientEmail) {
+          query = query.eq('email', clientEmail);
+        } else if (clientPhone) {
+          query = query.eq('phone', clientPhone);
+        }
+
+        const { data: existing } = await query.limit(1).maybeSingle();
+        clientId = existing?.id || null;
+      }
+
+      // Create client if doesn't exist
+      if (!clientId && clientName) {
+        const { data: newClient, error: clientError } = await supabase
+          .from('clients')
+          .insert({
+            unit_id: unit.id,
+            name: clientName,
+            email: clientEmail || null,
+            phone: clientPhone || null,
+          })
+          .select('id')
+          .single();
+
+        if (clientError) throw clientError;
+        clientId = newClient?.id || null;
+      }
+
+      // Create appointment
       const { error: insertError } = await supabase.from('appointments').insert({
         unit_id: unit.id,
+        client_id: clientId,
         service_ids: selectedServices.map(s => s.id),
         team_member_id: selectedPro === 'any' ? null : selectedPro,
         datetime,

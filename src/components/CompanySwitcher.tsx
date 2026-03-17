@@ -63,8 +63,8 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
           {active?.name?.charAt(0)?.toUpperCase() || 'L'}
         </div>
         <div className="flex-1 min-w-0 text-left">
-          <p className="text-sm font-semibold truncate">{active?.name || 'Empresa'}</p>
-          <p className="text-[10px] text-muted-foreground">{planLabel} · {active?.role === 'owner' ? 'Dono' : 'Equipa'}</p>
+          <p className="text-sm font-semibold truncate">{active?.name || 'Filial'}</p>
+          <p className="text-[10px] text-muted-foreground">Filial · {planLabel}</p>
         </div>
         {(companies.length > 1 || canAddMore) && (
           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />
