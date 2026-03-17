@@ -1,204 +1,105 @@
-import { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { calculateDistance } from '@/hooks/useDelivery';
-import type { Delivery, DeliveryLocation } from '@/hooks/useDelivery';
-import { Card } from '@/components/ui/card';
+import { useState } from 'react';
+import { Navigation, Loader2, AlertCircle, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { calculateDistance, type Delivery, type DeliveryLocation } from '@/hooks/useDelivery';
+
+const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
 
 interface DeliveryMapProps {
   delivery: Delivery;
   driverLocation?: DeliveryLocation;
-  onLocationUpdate?: (location: DeliveryLocation) => void;
 }
 
-export default function DeliveryMap({
-  delivery,
-  driverLocation,
-  onLocationUpdate,
-}: DeliveryMapProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const driverMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const customerMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const distance = useRef<number | null>(null);
+export default function DeliveryMap({ delivery, driverLocation }: DeliveryMapProps) {
+  const [imgError, setImgError] = useState(false);
 
-  // Initialize map
-  useEffect(() => {
-    const mapboxToken = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
-    if (!mapContainer.current || !mapboxToken) {
-      console.error('Mapbox token not found');
-      return;
+  const lat = delivery.customer_lat;
+  const lon = delivery.customer_lon;
+  const hasCoords = lat && lon;
+
+  const getStaticMapUrl = () => {
+    if (!hasCoords || !MAPBOX_TOKEN) return null;
+
+    const markers: string[] = [`pin-s+0ea5e9(${lon},${lat})`];
+    if (driverLocation) markers.push(`pin-s+22c55e(${driverLocation.longitude},${driverLocation.latitude})`);
+
+    const markersStr = markers.join(',');
+
+    if (driverLocation) {
+      const minLon = Math.min(lon, driverLocation.longitude);
+      const minLat = Math.min(lat, driverLocation.latitude);
+      const maxLon = Math.max(lon, driverLocation.longitude);
+      const maxLat = Math.max(lat, driverLocation.latitude);
+      return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${markersStr}/[${minLon},${minLat},${maxLon},${maxLat}]/600x300@2x?padding=80&access_token=${MAPBOX_TOKEN}`;
     }
 
-    mapboxgl.accessToken = mapboxToken;
+    return `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${markersStr}/${lon},${lat},14,0/600x300@2x?access_token=${MAPBOX_TOKEN}`;
+  };
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [delivery.customer_lon, delivery.customer_lat],
-      zoom: 14,
-      pitch: 0,
-      bearing: 0,
-    });
+  const staticMapUrl = getStaticMapUrl();
+  const navigateUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(delivery.customer_address)}&travelmode=driving`;
+  const openInMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 
-    map.current.on('load', () => {
-      setIsMapLoaded(true);
-    });
-
-    return () => {
-      map.current?.remove();
-    };
-  }, [delivery.customer_lat, delivery.customer_lon]);
-
-  // Add/update customer marker
-  useEffect(() => {
-    if (!isMapLoaded || !map.current) return;
-
-    // Remove existing marker
-    if (customerMarkerRef.current) {
-      customerMarkerRef.current.remove();
-    }
-
-    // Create customer marker (destination)
-    const customerEl = document.createElement('div');
-    customerEl.className = 'w-8 h-8 bg-blue-500 rounded-full border-2 border-white shadow-lg';
-    customerEl.innerHTML = '📍';
-    customerEl.style.fontSize = '14px';
-    customerEl.style.display = 'flex';
-    customerEl.style.alignItems = 'center';
-    customerEl.style.justifyContent = 'center';
-
-    customerMarkerRef.current = new mapboxgl.Marker(customerEl)
-      .setLngLat([delivery.customer_lon, delivery.customer_lat])
-      .addTo(map.current);
-
-    // Add popup
-    const popup = new mapboxgl.Popup({ offset: [0, -40] }).setHTML(
-      `<div class="font-semibold">${delivery.customer_name}</div><div class="text-sm">${delivery.customer_address}</div>`
-    );
-    customerMarkerRef.current.setPopup(popup);
-  }, [isMapLoaded, delivery]);
-
-  // Add/update driver marker and route
-  useEffect(() => {
-    if (!isMapLoaded || !map.current || !driverLocation) return;
-
-    // Calculate distance
-    distance.current = calculateDistance(
-      driverLocation.latitude,
-      driverLocation.longitude,
-      delivery.customer_lat,
-      delivery.customer_lon
-    );
-
-    // Remove existing driver marker
-    if (driverMarkerRef.current) {
-      driverMarkerRef.current.remove();
-    }
-
-    // Create driver marker (current position)
-    const driverEl = document.createElement('div');
-    driverEl.className = 'w-8 h-8 bg-green-500 rounded-full border-2 border-white shadow-lg animate-pulse';
-    driverEl.innerHTML = '🚗';
-    driverEl.style.fontSize = '14px';
-    driverEl.style.display = 'flex';
-    driverEl.style.alignItems = 'center';
-    driverEl.style.justifyContent = 'center';
-
-    driverMarkerRef.current = new mapboxgl.Marker(driverEl)
-      .setLngLat([driverLocation.longitude, driverLocation.latitude])
-      .addTo(map.current);
-
-    // Add route line between driver and customer
-    const existingSource = map.current.getSource('route') as mapboxgl.GeoJSONSource | undefined;
-    const routeGeoJSON = {
-      type: 'Feature' as const,
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: [
-          [driverLocation.longitude, driverLocation.latitude],
-          [delivery.customer_lon, delivery.customer_lat],
-        ],
-      },
-      properties: {},
-    };
-
-    if (existingSource) {
-      existingSource.setData(routeGeoJSON);
-    } else {
-      map.current.addSource('route', {
-        type: 'geojson',
-        data: routeGeoJSON,
-      });
-
-      map.current.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round',
-        },
-        paint: {
-          'line-color': '#10b981',
-          'line-width': 3,
-          'line-opacity': 0.6,
-        },
-      });
-    }
-
-    // Fit bounds to show both markers
-    const bounds = new mapboxgl.LngLatBounds(
-      [
-        Math.min(driverLocation.longitude, delivery.customer_lon),
-        Math.min(driverLocation.latitude, delivery.customer_lat),
-      ],
-      [
-        Math.max(driverLocation.longitude, delivery.customer_lon),
-        Math.max(driverLocation.latitude, delivery.customer_lat),
-      ]
-    );
-
-    map.current.fitBounds(bounds, { padding: 100 });
-  }, [isMapLoaded, driverLocation, delivery]);
+  const distance = driverLocation
+    ? calculateDistance(driverLocation.latitude, driverLocation.longitude, lat, lon)
+    : null;
 
   return (
-    <Card className="w-full h-full">
-      <div className="relative h-full">
-        <div ref={mapContainer} className="w-full h-full rounded-lg overflow-hidden" />
-
-        {/* Distance info overlay */}
-        {distance.current !== null && (
-          <div className="absolute top-4 right-4 bg-white px-4 py-2 rounded-lg shadow-lg z-10">
-            <div className="text-sm font-semibold text-gray-700">
-              Distância: {distance.current.toFixed(2)} km
-            </div>
+    <div className="w-full h-full flex flex-col rounded-lg overflow-hidden border border-border/40">
+      {/* Map image */}
+      <div className="relative flex-1 min-h-64 bg-muted">
+        {!hasCoords && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+            <AlertCircle className="w-8 h-8" />
+            <p className="text-sm">Coordenadas indisponíveis</p>
           </div>
         )}
 
-        {/* Status badge */}
-        <div className="absolute bottom-4 left-4 bg-white px-4 py-2 rounded-lg shadow-lg z-10">
-          <div className="text-sm font-medium">
-            Status:{' '}
-            <span
-              className={
-                delivery.status === 'en_route'
-                  ? 'text-green-600 font-semibold'
-                  : delivery.status === 'arrived'
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-yellow-600 font-semibold'
-              }
-            >
-              {delivery.status === 'en_route'
-                ? 'Em Trajeto'
-                : delivery.status === 'arrived'
-                  ? 'Chegou'
-                  : 'Pendente'}
-            </span>
+        {hasCoords && (!staticMapUrl || imgError) && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {staticMapUrl && !imgError && (
+          <a href={openInMapsUrl} target="_blank" rel="noopener noreferrer">
+            <img
+              src={staticMapUrl}
+              alt={`Mapa: ${delivery.customer_address}`}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          </a>
+        )}
+
+        {distance !== null && (
+          <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-1.5 shadow text-xs font-semibold text-gray-700">
+            {distance < 1 ? `${Math.round(distance * 1000)} m` : `${distance.toFixed(1)} km`}
+          </div>
+        )}
+
+        {driverLocation && (
+          <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm border border-border/40 rounded-lg px-3 py-2 shadow flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-xs"><span className="w-2.5 h-2.5 rounded-full bg-green-500" />Sua posição</div>
+            <div className="flex items-center gap-2 text-xs"><span className="w-2.5 h-2.5 rounded-full bg-sky-500" />Destino</div>
+          </div>
+        )}
+      </div>
+
+      {/* Address bar */}
+      <div className="px-4 py-3 bg-card border-t border-border/40 flex items-center justify-between gap-3">
+        <div className="flex items-start gap-2 min-w-0">
+          <MapPin className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Destino — {delivery.customer_name}</p>
+            <p className="text-sm font-medium leading-tight line-clamp-2">{delivery.customer_address}</p>
           </div>
         </div>
+        <Button size="sm" className="shrink-0 gap-1.5" onClick={() => window.open(navigateUrl, '_blank')}>
+          <Navigation className="w-3.5 h-3.5" />
+          Navegar
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }

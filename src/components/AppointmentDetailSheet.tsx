@@ -12,6 +12,7 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import SlideToAction from '@/components/SlideToAction';
+import AddressMap from '@/components/AddressMap';
 
 interface AppointmentDetailSheetProps {
   appointment: Appointment;
@@ -528,23 +529,10 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                   </div>
                 )}
 
-                {/* Address + mini map for home appointments */}
+                {/* Address + mapa para agendamentos ao domicílio */}
                 {appt.address && (
-                  <div className="mt-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <span>{appt.address}</span>
-                    </div>
-                    {import.meta.env.VITE_GOOGLE_MAPS_KEY && (
-                      <div className="rounded-xl overflow-hidden border border-border/50">
-                        <img
-                          src={`https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(appt.address)}&zoom=15&size=600x150&markers=color:red|${encodeURIComponent(appt.address)}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
-                          alt="Mapa"
-                          className="w-full h-[120px] object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
+                  <div className="mt-3">
+                    <AddressMap address={appt.address} />
                   </div>
                 )}
 
