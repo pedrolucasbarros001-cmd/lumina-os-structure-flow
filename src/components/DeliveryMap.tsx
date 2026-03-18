@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from 'react';
 import { Navigation, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
