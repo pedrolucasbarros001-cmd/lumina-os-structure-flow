@@ -372,7 +372,7 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                 </div>
               )}
 
-              {/* Professional selector */}}
+              {/* Professional selector */}
               <div className="px-4 py-3 border-b border-border/30">
                 <label className="text-xs text-muted-foreground uppercase tracking-widest font-medium block mb-2">Profissional</label>
                 <select
