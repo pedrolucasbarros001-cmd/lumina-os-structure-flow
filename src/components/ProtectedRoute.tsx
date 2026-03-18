@@ -45,9 +45,9 @@ export default function ProtectedRoute({ children, requireSetup = true }: Protec
     return <Navigate to="/agenda" replace />;
   }
 
-  // Staff route protection
-  const staffRestrictedRoutes = ['/team', '/unit', '/settings'];
-  if (profile.user_type === 'staff' && staffRestrictedRoutes.includes(location.pathname)) {
+  // Staff route protection — bloquear por prefixo para cobrir subpaths futuros
+  const staffRestrictedPrefixes = ['/team', '/unit', '/settings', '/vendas', '/catalogo'];
+  if (profile.user_type === 'staff' && staffRestrictedPrefixes.some(p => location.pathname === p || location.pathname.startsWith(p + '/'))) {
     return <Navigate to="/agenda" replace />;
   }
 

@@ -68,18 +68,28 @@ export function useCreateAppointment() {
     });
 }
 
-export function useUpdateAppointment() {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: async ({ id, ...updates }: { id: string } & Partial<TablesUpdate<'appointments'>>) => {
-            const { error } = await supabase
-                .from('appointments')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id);
-            if (error) throw error;
-        },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['appointments'] });
         },
+    });
+}
+
+export function useClientAppointments(clientId: string | null) {
+    const { data: unit } = useUnit();
+    return useQuery({
+        queryKey: ['appointments', 'client', clientId],
+        queryFn: async () => {
+            if (!unit || !clientId) return [];
+            const { data, error } = await supabase
+                .from('appointments')
+                .select('*')
+                .eq('unit_id', unit.id)
+                .eq('client_id', clientId)
+                .order('datetime', { ascending: false })
+                .limit(10);
+            if (error) throw error;
+            return data as Appointment[];
+        },
+        enabled: !!unit && !!clientId,
     });
 }

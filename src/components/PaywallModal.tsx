@@ -1,4 +1,5 @@
 import { X, Lock, TrendingUp, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
@@ -13,6 +14,7 @@ interface PaywallModalProps {
 
 export function PaywallModal({ open, onClose, type, currentPlan, current, limit }: PaywallModalProps) {
   const isMonthly = currentPlan === 'monthly';
+  const navigate = useNavigate();
 
   const content = {
     units: {
@@ -97,7 +99,10 @@ export function PaywallModal({ open, onClose, type, currentPlan, current, limit 
           )}
 
           {/* CTA */}
-          <Button className="w-full h-12 rounded-xl font-semibold text-base mb-3">
+          <Button
+            className="w-full h-12 rounded-xl font-semibold text-base mb-3"
+            onClick={() => { onClose(); if (isMonthly) navigate('/plans'); }}
+          >
             <Lock className="w-4 h-4 mr-2" />
             {data.cta}
           </Button>

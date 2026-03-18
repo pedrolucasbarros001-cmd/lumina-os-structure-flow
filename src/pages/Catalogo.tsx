@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Plus, Clock, ToggleLeft, ToggleRight, Scissors, Home, Building2, Search, Trash2 } from 'lucide-react';
 import { useServices, Service, useCreateService, useUpdateService, useDeleteService } from '@/hooks/useServices';
+import { useUnit } from '@/hooks/useUnit';
+import { useUserContext } from '@/hooks/useUserContext';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -16,6 +18,8 @@ import { cn } from '@/lib/utils';
 function AddServiceSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     const createService = useCreateService();
     const { toast } = useToast();
+    const { data: unit } = useUnit();
+    const unitDoesHome = unit?.accepts_home_visits === true;
     const [form, setForm] = useState({
         name: '', price: '', duration: '60', description: '',
         is_active: true, allows_home: false, allows_unit: true,
@@ -30,6 +34,8 @@ function AddServiceSheet({ open, onClose }: { open: boolean; onClose: () => void
                 duration: parseInt(form.duration),
                 description: form.description,
                 is_active: form.is_active,
+                is_presential: form.allows_unit,
+                is_home_service: unitDoesHome ? form.allows_home : false,
             });
             toast({ title: 'Serviço criado!' });
             onClose();
@@ -60,10 +66,13 @@ function AddServiceSheet({ open, onClose }: { open: boolean; onClose: () => void
                             <div className="flex items-center gap-2 text-sm"><Building2 className="w-4 h-4 text-muted-foreground" /><span>Presencial</span></div>
                             <Switch checked={form.allows_unit} onCheckedChange={v => setForm(f => ({ ...f, allows_unit: v }))} />
                         </div>
-                        <div className="flex items-center justify-between p-3 rounded-xl border border-border/50">
-                            <div className="flex items-center gap-2 text-sm"><Home className="w-4 h-4 text-muted-foreground" /><span>Ao Domicílio</span></div>
-                            <Switch checked={form.allows_home} onCheckedChange={v => setForm(f => ({ ...f, allows_home: v }))} />
-                        </div>
+                        {/* Só mostra toggle de domicílio se a unidade aceita visitas */}
+                        {unitDoesHome && (
+                            <div className="flex items-center justify-between p-3 rounded-xl border border-border/50">
+                                <div className="flex items-center gap-2 text-sm"><Home className="w-4 h-4 text-muted-foreground" /><span>Ao Domicílio</span></div>
+                                <Switch checked={form.allows_home} onCheckedChange={v => setForm(f => ({ ...f, allows_home: v }))} />
+                            </div>
+                        )}
                     </div>
 
                     <Button type="submit" className="w-full h-12" disabled={createService.isPending}>Criar Serviço</Button>
@@ -134,6 +143,7 @@ function ServiceCard({ service }: { service: Service }) {
 // ─────────────────────────────────────────
 export default function Catalogo() {
     const { data: services = [], isLoading } = useServices();
+    const { isStaff } = useUserContext();
     const [addOpen, setAddOpen] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -147,9 +157,12 @@ export default function Catalogo() {
             <div className="sticky top-0 z-10 px-4 pt-4 pb-3 bg-background/80 backdrop-blur-md border-b border-border/50 space-y-3">
                 <div className="flex items-center justify-between">
                     <p className="text-sm text-muted-foreground">{active.length} ativo{active.length !== 1 ? 's' : ''}</p>
-                    <Button size="sm" onClick={() => setAddOpen(true)}>
-                        <Plus className="w-4 h-4 mr-1.5" />Novo Serviço
-                    </Button>
+                    {/* Apenas owner pode criar serviços */}
+                    {!isStaff && (
+                        <Button size="sm" onClick={() => setAddOpen(true)}>
+                            <Plus className="w-4 h-4 mr-1.5" />Novo Serviço
+                        </Button>
+                    )}
                 </div>
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -168,7 +181,7 @@ export default function Catalogo() {
                             <p className="font-semibold">Sem serviços no catálogo</p>
                             <p className="text-sm text-muted-foreground">Crie o primeiro serviço do seu negócio</p>
                         </div>
-                        <Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-2" />Criar Serviço</Button>
+                        {!isStaff && <Button onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-2" />Criar Serviço</Button>}
                     </div>
                 ) : (
                     <>
@@ -183,7 +196,7 @@ export default function Catalogo() {
                 )}
             </div>
 
-            <AddServiceSheet open={addOpen} onClose={() => setAddOpen(false)} />
+            <AddServiceSheet open={addOpen && !isStaff} onClose={() => setAddOpen(false)} />
         </div>
     );
 }

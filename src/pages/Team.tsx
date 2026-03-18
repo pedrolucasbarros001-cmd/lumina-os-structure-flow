@@ -160,6 +160,7 @@ function NewMemberSheet({ open, onClose }: { open: boolean; onClose: () => void 
         name: form.name,
         role: form.role,
         accepts_home_visits: form.accepts_home_visits,
+        commission_rate: form.commission_rate[0],
       });
       toast({ title: 'Membro adicionado!' });
       handleClose();

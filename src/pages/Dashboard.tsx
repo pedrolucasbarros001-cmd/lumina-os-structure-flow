@@ -575,7 +575,8 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => filterByTimeframe(allAppointments, timeframe), [allAppointments, timeframe]);
 
-  const isIndependent = profile?.business_type === 'independent';
+  const isIndependent = profile?.business_type === 'solo';
+  const hasHomeVisits = unit?.accepts_home_visits === true;
 
   // If staff, show personal dashboard
   if (isStaff) {
@@ -620,10 +621,10 @@ export default function Dashboard() {
       {/* Sales Container */}
       <SalesContainer appointments={filtered} privacyMode={privacyMode} lastWeekAppointments={lastWeekAppts} />
 
-      {/* Modality */}
-      <ModalityContainer appointments={filtered} privacyMode={privacyMode} />
+      {/* Modality — só faz sentido se a unidade faz domicílio */}
+      {hasHomeVisits && <ModalityContainer appointments={filtered} privacyMode={privacyMode} />}
 
-      {/* Team Ranking — hidden for independents */}
+      {/* Team Ranking — hidden for solo owners */}
       {!isIndependent && <TeamRanking appointments={filtered} privacyMode={privacyMode} />}
 
       {/* Services Ranking */}

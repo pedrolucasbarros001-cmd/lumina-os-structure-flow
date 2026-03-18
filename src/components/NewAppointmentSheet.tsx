@@ -10,6 +10,7 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useCreateAppointment } from '@/hooks/useAppointments';
 import { useToast } from '@/hooks/use-toast';
 import { useUserContext } from '@/hooks/useUserContext';
+import { useUnit } from '@/hooks/useUnit';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -34,15 +35,20 @@ interface SelectedService {
 export default function NewAppointmentSheet({ open, onClose, prefillDate, prefillTime, prefillTeamMemberId }: NewAppointmentSheetProps) {
   const navigate = useNavigate();
   const { isStaff, teamMemberId: staffTeamMemberId } = useUserContext();
+  const { data: unit } = useUnit();
   const { data: services = [] } = useServices();
   const { data: clients = [] } = useClients();
   const { data: teamMembers = [] } = useTeamMembers();
   const createAppointment = useCreateAppointment();
   const { toast } = useToast();
 
+  const unitAcceptsHome = unit?.accepts_home_visits === true;
+
   const [step, setStep] = useState<Step>('client');
   const [clientSearch, setClientSearch] = useState('');
   const [serviceSearch, setServiceSearch] = useState('');
+  const [appointmentType, setAppointmentType] = useState<'unit' | 'home'>('unit');
+  const [appointmentAddress, setAppointmentAddress] = useState('');
 
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; email?: string | null } | null>(null);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
@@ -70,6 +76,8 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
       setSelectedServices([]);
       setClientSearch('');
       setServiceSearch('');
+      setAppointmentType('unit');
+      setAppointmentAddress('');
       // Auto-select: prefill > staff own > sole team member
       const autoMember = prefillTeamMemberId || (isStaff && staffTeamMemberId ? staffTeamMemberId : (teamMembers.length === 1 ? teamMembers[0].id : ''));
       setSelectedTeamMemberId(autoMember);
@@ -128,8 +136,8 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
         datetime,
         duration: totalDuration || 60,
         value: totalPrice,
-        type: 'unit',
-        address: null,
+        type: appointmentType,
+        address: appointmentType === 'home' ? appointmentAddress || null : null,
         notes: null,
         status: 'confirmed',
       });
@@ -327,7 +335,44 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                 </div>
               </div>
 
-              {/* Professional selector */}
+              {/* Home visit type toggle - only if unit accepts home visits */}
+              {unitAcceptsHome && (
+                <div className="px-4 py-3 border-b border-border/30">
+                  <label className="text-xs text-muted-foreground uppercase tracking-widest font-medium block mb-2">Tipo</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAppointmentType('unit')}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                        appointmentType === 'unit' ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 text-muted-foreground'
+                      )}
+                    >
+                      🏪 No Espaço
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAppointmentType('home')}
+                      className={cn(
+                        'flex-1 py-2 rounded-lg text-sm font-medium border transition-colors',
+                        appointmentType === 'home' ? 'border-primary bg-primary/10 text-primary' : 'border-border/50 text-muted-foreground'
+                      )}
+                    >
+                      🏠 Ao Domicílio
+                    </button>
+                  </div>
+                  {appointmentType === 'home' && (
+                    <Input
+                      className="mt-3 text-sm"
+                      placeholder="Morada do cliente..."
+                      value={appointmentAddress}
+                      onChange={e => setAppointmentAddress(e.target.value)}
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* Professional selector */}}
               <div className="px-4 py-3 border-b border-border/30">
                 <label className="text-xs text-muted-foreground uppercase tracking-widest font-medium block mb-2">Profissional</label>
                 <select

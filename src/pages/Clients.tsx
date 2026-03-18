@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Search, Plus, Phone, Mail, ChevronRight, UserCircle2 } from 'lucide-react';
-import { useClients, Client, useCreateClient } from '@/hooks/useClients';
+import { Search, Plus, ChevronRight, UserCircle2, Phone, Mail, Trash2, Pencil, Calendar, X } from 'lucide-react';
+import { useClients, Client, useCreateClient, useUpdateClient, useDeleteClient } from '@/hooks/useClients';
 import { useUserContext } from '@/hooks/useUserContext';
+import { useClientAppointments } from '@/hooks/useAppointments';
 import { useToast } from '@/hooks/use-toast';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+import { pt } from 'date-fns/locale';
 
 function AddClientSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createClient = useCreateClient();
@@ -59,11 +62,160 @@ function ClientCard({ client, onClick }: { client: Client; onClick: () => void }
   );
 }
 
+function ClientDetailSheet({ client, onClose, isStaff }: { client: Client | null; onClose: () => void; isStaff: boolean }) {
+  const updateClient = useUpdateClient();
+  const deleteClient = useDeleteClient();
+  const { data: appointments = [], isLoading: apptLoading } = useClientAppointments(client?.id ?? null);
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [form, setForm] = useState({ name: '', phone: '', email: '' });
+
+  const handleEdit = () => {
+    if (!client) return;
+    setForm({ name: client.name, phone: client.phone || '', email: client.email || '' });
+    setEditing(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!client) return;
+    try {
+      await updateClient.mutateAsync({ id: client.id, name: form.name, phone: form.phone || null, email: form.email || null });
+      toast({ title: 'Cliente atualizado!' });
+      setEditing(false);
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao atualizar cliente.' });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!client) return;
+    try {
+      await deleteClient.mutateAsync(client.id);
+      toast({ title: 'Cliente removido.' });
+      onClose();
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao remover cliente.' });
+    }
+  };
+
+  if (!client) return null;
+
+  const initials = client.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  return (
+    <Sheet open={!!client} onOpenChange={o => !o && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-3xl h-[85vh] flex flex-col p-0">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 pt-5 pb-4 border-b border-border/30">
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center shrink-0">
+            <X className="w-4 h-4" />
+          </button>
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-sm font-bold shrink-0">
+            {initials}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold truncate">{client.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{client.phone || client.email || 'Sem contacto'}</p>
+          </div>
+          {!isStaff && (
+            <div className="flex gap-1">
+              <button onClick={handleEdit} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
+                <Pencil className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <button onClick={() => setConfirmDelete(true)} className="w-8 h-8 rounded-full hover:bg-destructive/10 flex items-center justify-center">
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {/* Edit form */}
+          {editing && !isStaff && (
+            <form onSubmit={handleSave} className="px-4 py-4 space-y-3 border-b border-border/30 bg-muted/20">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Editar cliente</p>
+              <div className="space-y-1"><Label>Nome</Label><Input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Telefone</Label><Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>E-mail</Label><Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <div className="flex gap-2">
+                <Button type="submit" size="sm" className="flex-1" disabled={updateClient.isPending}>Guardar</Button>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancelar</Button>
+              </div>
+            </form>
+          )}
+
+          {/* Confirm delete */}
+          {confirmDelete && !isStaff && (
+            <div className="px-4 py-4 space-y-3 border-b border-border/30 bg-destructive/5">
+              <p className="text-sm font-semibold">Remover <span className="text-destructive">{client.name}</span>?</p>
+              <p className="text-xs text-muted-foreground">Esta ação não pode ser desfeita.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="destructive" className="flex-1" onClick={handleDelete} disabled={deleteClient.isPending}>Confirmar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(false)}>Cancelar</Button>
+              </div>
+            </div>
+          )}
+
+          {/* Contact info */}
+          <div className="px-4 py-4 space-y-2 border-b border-border/30">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Contacto</p>
+            {client.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="w-4 h-4 text-muted-foreground" />
+                <span>{client.phone}</span>
+              </div>
+            )}
+            {client.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+                <span>{client.email}</span>
+              </div>
+            )}
+            {!client.phone && !client.email && (
+              <p className="text-sm text-muted-foreground">Sem contacto registado</p>
+            )}
+          </div>
+
+          {/* Appointment history */}
+          <div className="px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+              <Calendar className="w-3.5 h-3.5" />
+              Histórico de Marcações
+            </p>
+            {apptLoading ? (
+              <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-12 rounded-lg bg-muted/40 animate-pulse" />)}</div>
+            ) : appointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Sem marcações registadas</p>
+            ) : (
+              <div className="space-y-2">
+                {appointments.map(appt => (
+                  <div key={appt.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                    <div>
+                      <p className="text-sm font-medium capitalize">
+                        {format(parseISO(appt.datetime), "d 'de' MMM yyyy, HH:mm", { locale: pt })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{appt.type === 'home' ? '🏠 Ao Domicílio' : '🏪 No Espaço'} · {appt.status}</p>
+                    </div>
+                    <span className="text-sm font-bold text-primary">€{(appt.value ?? 0).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function Clients() {
   const { data: clients = [], isLoading } = useClients();
   const { isStaff } = useUserContext();
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
 
   const filtered = clients.filter(c =>
     c.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -85,7 +237,6 @@ export default function Clients() {
               className="pl-9"
             />
           </div>
-          {/* Hide add button for staff */}
           {!isStaff && (
             <Button size="icon" onClick={() => setAddOpen(true)}>
               <Plus className="w-4 h-4" />
@@ -119,14 +270,14 @@ export default function Clients() {
         ) : (
           <div className="divide-y divide-border/30">
             {filtered.map(client => (
-              <ClientCard key={client.id} client={client} onClick={() => { }} />
+              <ClientCard key={client.id} client={client} onClick={() => setSelectedClient(client)} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Only show sheet for non-staff */}
       {!isStaff && <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />}
+      <ClientDetailSheet client={selectedClient} onClose={() => setSelectedClient(null)} isStaff={isStaff} />
     </div>
   );
 }

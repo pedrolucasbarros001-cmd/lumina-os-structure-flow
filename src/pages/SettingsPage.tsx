@@ -4,7 +4,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
@@ -53,6 +53,29 @@ export default function SettingsPage() {
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const { data: sub } = useQuery({
+    queryKey: ['subscription', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('plan_type, status, trial_ends_at')
+        .eq('owner_id', user.id)
+        .in('status', ['trialing', 'active'])
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const planLabel = sub?.status === 'trialing'
+    ? 'Trial (5 dias)'
+    : sub?.plan_type === 'annual'
+      ? 'Lumina Enterprise ✨'
+      : sub?.plan_type === 'monthly'
+        ? 'Lumina Pro'
+        : 'Sem plano ativo';
 
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
@@ -171,7 +194,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Plano</p>
-              <p className="text-sm font-medium">Trial (14 dias)</p>
+              <p className="text-sm font-medium">{planLabel}</p>
             </div>
           </div>
         </section>
