@@ -1,116 +1,177 @@
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Check, ArrowRight } from 'lucide-react';
+import { Sparkles, Check, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+const PLANS = [
+  {
+    id: 'monthly' as const,
+    name: 'Lumina Pro',
+    tagline: 'Para profissionais e pequenos negócios',
+    price: '69',
+    period: '/mês',
+    billingNote: 'Faturado mensalmente',
+    highlight: false,
+    badge: null,
+    Icon: Zap,
+    limits: '1 unidade · até 4 profissionais',
+    features: [
+      'Agenda inteligente e agendamentos ilimitados',
+      'CRM de clientes com notas técnicas',
+      'Catálogo de serviços e produtos',
+      'Página de agendamento online pública',
+      'Painel financeiro e relatórios',
+      'Convites para até 4 colaboradores',
+    ],
+  },
+  {
+    id: 'annual' as const,
+    name: 'Lumina Enterprise',
+    tagline: 'Para equipas, franquias e escala máxima',
+    price: '64,75',
+    period: '/mês',
+    billingNote: 'Faturado anualmente · Poupa 35%',
+    highlight: true,
+    badge: 'Mais Popular',
+    Icon: Sparkles,
+    limits: 'até 3 unidades · profissionais ilimitados',
+    features: [
+      'Tudo do Pro',
+      'Até 3 unidades (multi-espaço)',
+      'Profissionais ilimitados',
+      'Modo delivery com rastreamento de rota',
+      'Dashboard de métricas de delivery',
+      'Gestor de zonas de cobertura',
+    ],
+  },
+];
+
 export default function PlanSelection() {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const handleSelectPlan = (planId: string) => {
-        // Navigate to signup with the plan in the query string or state
-        navigate(`/signup?plan=${planId}`);
-    };
+  const handleSelectPlan = (planId: 'monthly' | 'annual') => {
+    sessionStorage.setItem('selected_plan', planId);
+    navigate('/onboarding');
+  };
 
-    return (
-        <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-            {/* Background Orbs */}
-            <div className="absolute top-0 -left-20 w-80 h-80 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-0 -right-20 w-80 h-80 bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
+  return (
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Orbs */}
+      <div className="absolute top-0 -left-20 w-96 h-96 bg-primary/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute bottom-0 -right-20 w-96 h-96 bg-accent/15 rounded-full blur-[140px] pointer-events-none" />
 
-            <div className="w-full max-w-5xl z-10 space-y-12">
-                <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                        <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-                        <h1 className="text-2xl font-black tracking-tighter uppercase italic">Lumina OS</h1>
-                    </div>
-                    <h2 className="text-4xl md:text-6xl font-black tracking-tighter uppercase">
-                        Escolha sua <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Jornada</span>
-                    </h2>
-                    <p className="text-zinc-500 font-medium max-w-xl mx-auto text-lg">
-                        Sistema de gestão inteligente para salões, barbearias e profissionais de beleza. Elevando a sua operação ao próximo nível.
-                    </p>
-                </div>
+      <div className="w-full max-w-4xl z-10 space-y-10">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium mb-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            LUMINA OS
+          </div>
+          <h1 className="text-4xl font-black tracking-tight">
+            Escolhe o teu plano
+          </h1>
+          <p className="text-zinc-400 text-lg max-w-md mx-auto">
+            Começa com 5 dias grátis. Sem compromisso.
+          </p>
 
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    {/* Starter Plan */}
-                    <div className="relative group p-8 rounded-[2.5rem] bg-zinc-900/40 border border-zinc-800 hover:border-zinc-700 transition-all duration-300">
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-2">Lumina Essencial</h3>
-                                <p className="text-zinc-500 font-medium text-sm h-10">
-                                    Perfeito para profissionais liberais e negócios em fase inicial.
-                                </p>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-5xl font-black tracking-tighter text-white">€0</span>
-                                <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">/mês</span>
-                            </div>
-                            <ul className="space-y-4 py-6 border-y border-zinc-800 text-sm font-medium">
-                                {[
-                                    'Agendamentos ilimitados',
-                                    'Gestão básica de clientes',
-                                    'Agenda digital e lembretes',
-                                    'Página de agendamento online',
-                                    'Atendimento a 1 profissional'
-                                ].map((feature, i) => (
-                                    <li key={i} className="flex items-center gap-3">
-                                        <Check className="w-5 h-5 text-zinc-600" />
-                                        <span className="text-zinc-400">{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <Button
-                                onClick={() => handleSelectPlan('free')}
-                                className="w-full h-14 rounded-2xl font-black uppercase tracking-widest bg-zinc-800 hover:bg-zinc-700 text-white transition-all"
-                            >
-                                Começar Grátis
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Pro Max Plan */}
-                    <div className="relative group p-8 rounded-[2.5rem] bg-zinc-900/60 border border-primary/50 shadow-2xl shadow-primary/10 transition-all duration-300 transform md:-translate-y-4 overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 blur-3xl rounded-full" />
-                        <div className="absolute top-4 right-4 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                            Mais Escolhido
-                        </div>
-
-                        <div className="space-y-6 relative z-10">
-                            <div>
-                                <h3 className="text-2xl font-black uppercase tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-2">Lumina Pro Max</h3>
-                                <p className="text-zinc-400 font-medium text-sm h-10">
-                                    Cockpit completo para equipas, automações e escala máxima da operação.
-                                </p>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-5xl font-black tracking-tighter text-white">€39</span>
-                                <span className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">/mês</span>
-                            </div>
-                            <ul className="space-y-4 py-6 border-y border-zinc-800 text-sm font-medium">
-                                {[
-                                    'Tudo do Essencial',
-                                    'Gestão multi-profissionais e equipas',
-                                    'Painel Financeiro e relatórios complexos',
-                                    'Automações e marketing integrado',
-                                    'Gestão de estoque e vendas de produtos',
-                                    'Catálogo interativo via QR Code'
-                                ].map((feature, i) => (
-                                    <li key={i} className="flex items-center gap-3">
-                                        <Check className="w-5 h-5 text-primary" />
-                                        <span className="text-white">{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            <Button
-                                onClick={() => handleSelectPlan('promax')}
-                                className="w-full h-14 rounded-2xl font-black uppercase tracking-widest bg-primary text-white hover:scale-[1.02] shadow-xl shadow-primary/20 transition-all flex items-center justify-center gap-2"
-                            >
-                                Elevar Minha Empresa <ArrowRight className="w-5 h-5" />
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          {/* Trust badges */}
+          <div className="flex items-center justify-center gap-6 text-zinc-500 text-sm pt-2 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-500" /> Sem compromisso
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-500" /> Cancela quando quiseres
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Check className="w-4 h-4 text-emerald-500" /> Suporte incluído
+            </span>
+          </div>
         </div>
-    );
+
+        {/* Plans Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
+          {PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={cn(
+                'relative flex flex-col rounded-3xl border p-6 transition-all duration-300',
+                plan.highlight
+                  ? 'border-primary bg-gradient-to-br from-primary/10 via-primary/5 to-transparent shadow-[0_0_60px_-15px] shadow-primary/30 scale-[1.02]'
+                  : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-600'
+              )}
+            >
+              {/* Popular Badge */}
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-primary text-primary-foreground text-xs font-bold px-4 py-1 rounded-full">
+                    {plan.badge}
+                  </span>
+                </div>
+              )}
+
+              {/* Trial Badge */}
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold mb-5 self-start">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                </span>
+                5 Dias Grátis · Cancela quando quiseres
+              </div>
+
+              {/* Plan header */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className={cn(
+                  'w-10 h-10 rounded-2xl flex items-center justify-center shrink-0',
+                  plan.highlight ? 'bg-primary text-primary-foreground' : 'bg-zinc-800 text-zinc-400'
+                )}>
+                  <plan.Icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold">{plan.name}</h2>
+                  <p className="text-zinc-500 text-xs">{plan.tagline}</p>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="mb-1">
+                <span className="text-4xl font-black">€{plan.price}</span>
+                <span className="text-zinc-500 text-sm ml-1">{plan.period}</span>
+              </div>
+              <p className="text-xs text-zinc-500 mb-1">{plan.billingNote}</p>
+              <p className="text-xs text-zinc-600 mb-6">{plan.limits}</p>
+
+              {/* Features */}
+              <ul className="space-y-2.5 mb-6 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5 text-sm text-zinc-300">
+                    <Check className={cn('w-4 h-4 shrink-0 mt-0.5', plan.highlight ? 'text-primary' : 'text-emerald-500')} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA */}
+              <Button
+                className={cn(
+                  'w-full h-12 rounded-xl font-bold text-sm',
+                  plan.highlight
+                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700'
+                )}
+                onClick={() => handleSelectPlan(plan.id)}
+              >
+                Começar com 5 dias grátis
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer note */}
+        <p className="text-center text-xs text-zinc-600">
+          Processado com segurança pelo Stripe. O cartão só é cobrado após o período de trial.
+        </p>
+      </div>
+    </div>
+  );
 }

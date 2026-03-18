@@ -45,7 +45,7 @@ const App = () => (
 
             {/* Auth routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
+            <Route path="/signup" element={<Navigate to="/plans" replace />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -61,8 +61,8 @@ const App = () => (
             {/* Plan selection page */}
             <Route path="/plans" element={<PlanSelection />} />
 
-            {/* Onboarding (Phase 1) */}
-            <Route path="/onboarding" element={<ProtectedRoute requireSetup={false}><Onboarding /></ProtectedRoute>} />
+            {/* Onboarding (Phase 1) — semi-público, gere o próprio auth */}
+            <Route path="/onboarding" element={<Onboarding />} />
 
             {/* Legacy /setup redirects to agenda */}
             <Route path="/setup" element={<Navigate to="/agenda" replace />} />

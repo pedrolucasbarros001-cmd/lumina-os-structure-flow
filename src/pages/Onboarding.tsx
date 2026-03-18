@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Briefcase, Users, Store, Bike, MapPin, CheckCircle2, ChevronLeft, Scissors, Clock } from 'lucide-react';
+import { ArrowRight, Briefcase, Users, Store, Bike, MapPin, CheckCircle2, ChevronLeft, Scissors, Clock, Eye, EyeOff, CreditCard, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
@@ -13,7 +13,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 
-type OnboardingStep = 'identity' | 'size' | 'categories' | 'logistics' | 'service' | 'hours' | 'done';
+type OnboardingStep = 'account' | 'identity' | 'size' | 'categories' | 'logistics' | 'service' | 'hours' | 'payment' | 'done';
 
 const businessCategories = [
   'Cabelo', 'Barbearia', 'Estética', 'Massagem', 'Tatuagem', 
@@ -30,7 +30,7 @@ type BusinessHours = Record<string, { open: boolean; start: string; end: string 
 const defaultHours = (): BusinessHours =>
   Object.fromEntries(DAYS.map(d => [d.key, { open: !['sat', 'sun'].includes(d.key), start: '09:00', end: '18:00' }]));
 
-const ALL_STEPS: OnboardingStep[] = ['identity', 'size', 'categories', 'logistics', 'service', 'hours'];
+const PROGRESS_STEPS: OnboardingStep[] = ['identity', 'size', 'categories', 'logistics', 'service', 'hours', 'payment'];
 
 export default function Onboarding() {
   const { user } = useAuth();
@@ -41,12 +41,36 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (!profileLoading && profile?.onboarding_completed) {
-      navigate('/dashboard', { replace: true });
+      navigate('/agenda', { replace: true });
     }
   }, [profile, profileLoading, navigate]);
 
-  const [step, setStep] = useState<OnboardingStep>('identity');
+  const [step, setStep] = useState<OnboardingStep>(() => user ? 'identity' : 'account');
   const [loading, setLoading] = useState(false);
+
+  // Account creation state
+  const [accountForm, setAccountForm] = useState({ fullName: '', email: '', password: '' });
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const selectedPlan = (sessionStorage.getItem('selected_plan') || 'monthly') as 'monthly' | 'annual';
+
+  // Advance from account → identity when user authenticates
+  useEffect(() => {
+    if (user && step === 'account') setStep('identity');
+  }, [user, step]);
+
+  // Detect Stripe return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutSuccess = params.get('checkout_success');
+    const pendingCompletion = sessionStorage.getItem('pending_onboarding_completion');
+    if (checkoutSuccess === 'true' && pendingCompletion && user) {
+      sessionStorage.removeItem('pending_onboarding_completion');
+      sessionStorage.removeItem('selected_plan');
+      handleFinalCompletion();
+    }
+  }, [user]);
 
   // Step 1: Identity
   const [businessName, setBusinessName] = useState('');
@@ -73,13 +97,64 @@ export default function Onboarding() {
   // Track created unit for later steps
   const [createdUnitId, setCreatedUnitId] = useState<string | null>(null);
 
+  const { signUp } = useAuth();
+
+  const handleCreateAccount = async () => {
+    const { fullName, email, password } = accountForm;
+    if (!fullName.trim() || !email.trim() || !password) return;
+    setAccountLoading(true);
+    try {
+      await signUp(email, password, fullName);
+      // useEffect will advance to 'identity' when user becomes available
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Erro ao criar conta', description: err.message });
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  const handleFinalCompletion = async () => {
+    if (!user) return;
+    try {
+      await supabase.from('profiles').update({
+        onboarding_completed: true,
+        setup_completed: true,
+      }).eq('id', user.id);
+      await queryClient.invalidateQueries();
+      setStep('done');
+      setTimeout(() => navigate('/agenda', { replace: true }), 2000);
+    } catch {
+      toast({ variant: 'destructive', title: 'Erro ao finalizar configuração.' });
+    }
+  };
+
+  const handleActivateWithStripe = async () => {
+    if (!user) return;
+    setPaymentLoading(true);
+    try {
+      const priceId = selectedPlan === 'annual'
+        ? import.meta.env.VITE_STRIPE_ENTERPRISE_PRICE_ID
+        : import.meta.env.VITE_STRIPE_PRO_PRICE_ID;
+
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId, planType: selectedPlan },
+      });
+      if (error || !data?.url) throw new Error('Erro ao criar sessão de pagamento');
+      sessionStorage.setItem('pending_onboarding_completion', 'true');
+      window.location.href = data.url;
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Erro', description: err.message });
+      setPaymentLoading(false);
+    }
+  };
+
   const toggleCategory = (category: string) => {
     setSelectedCategories(prev =>
       prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
     );
   };
 
-  const stepIndex = ALL_STEPS.indexOf(step);
+  const stepIndex = PROGRESS_STEPS.indexOf(step);
 
   // After logistics, create the unit, then proceed to service step
   const handleLogisticsNext = async () => {
@@ -153,13 +228,9 @@ export default function Onboarding() {
     if (!user || !createdUnitId) return;
     setLoading(true);
     try {
-      // Save hours
       await supabase.from('units').update({ business_hours: hours }).eq('id', createdUnitId);
 
-      // Mark BOTH flags complete
       await supabase.from('profiles').update({
-        onboarding_completed: true,
-        setup_completed: true,
         business_type: businessType,
         service_model: logisticsType,
         team_size: businessType === 'team' ? teamSize : null,
@@ -167,9 +238,7 @@ export default function Onboarding() {
         linked_unit_id: createdUnitId,
       }).eq('id', user.id);
 
-      await queryClient.invalidateQueries();
-      setStep('done');
-      setTimeout(() => navigate('/agenda', { replace: true }), 2000);
+      setStep('payment');
     } catch (error) {
       console.error('Finish error:', error);
       toast({ variant: 'destructive', title: 'Erro ao guardar configurações.' });
@@ -191,13 +260,13 @@ export default function Onboarding() {
       <div className="w-full max-w-md">
 
         {/* Header Progress */}
-        {step !== 'done' && (
+        {step !== 'done' && step !== 'account' && (
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-center mb-6 bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
               LUMINA OS
             </h1>
             <div className="flex items-center justify-center gap-2">
-              {ALL_STEPS.map((s, i) => (
+              {PROGRESS_STEPS.map((s, i) => (
                 <div
                   key={s}
                   className={cn(
@@ -208,8 +277,70 @@ export default function Onboarding() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Passo {stepIndex + 1} de {ALL_STEPS.length}
+              Passo {stepIndex + 1} de {PROGRESS_STEPS.length}
             </p>
+          </div>
+        )}
+
+        {/* STEP 0: Create Account */}
+        {step === 'account' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-black bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">LUMINA OS</h2>
+              <h3 className="text-xl font-bold">Cria a tua conta</h3>
+              <p className="text-muted-foreground text-sm">Começa o teu trial de 5 dias gratuito</p>
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Nome completo</Label>
+                <Input
+                  placeholder="O teu nome"
+                  value={accountForm.fullName}
+                  onChange={e => setAccountForm(f => ({ ...f, fullName: e.target.value }))}
+                  className="h-12"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="tu@exemplo.com"
+                  value={accountForm.email}
+                  onChange={e => setAccountForm(f => ({ ...f, email: e.target.value }))}
+                  className="h-12"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Password</Label>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={accountForm.password}
+                    onChange={e => setAccountForm(f => ({ ...f, password: e.target.value }))}
+                    className="h-12 pr-11"
+                    onKeyDown={e => e.key === 'Enter' && handleCreateAccount()}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <Button
+                className="w-full h-12"
+                disabled={!accountForm.fullName.trim() || !accountForm.email.trim() || accountForm.password.length < 8 || accountLoading}
+                onClick={handleCreateAccount}
+              >
+                {accountLoading ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" /> : null}
+                {accountLoading ? 'A criar conta...' : 'Criar Conta e Continuar'}
+                {!accountLoading && <ArrowRight className="w-4 h-4 ml-2" />}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -424,9 +555,58 @@ export default function Onboarding() {
               })}
             </div>
             <Button className="w-full h-12 bg-gradient-to-r from-primary to-accent" disabled={loading} onClick={handleFinish}>
-              {loading ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-              {loading ? 'A finalizar...' : 'Concluir e Abrir Agenda'}
+              {loading ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" /> : <ArrowRight className="w-4 h-4 mr-2" />}
+              {loading ? 'A guardar...' : 'Avançar para Pagamento'}
             </Button>
+          </div>
+        )}
+
+        {/* STEP: Payment */}
+        {step === 'payment' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="text-center space-y-3">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+                <CreditCard className="w-7 h-7 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">Ativar subscrição</h2>
+              <p className="text-muted-foreground text-sm">
+                Plano selecionado: <span className="font-semibold text-foreground">{selectedPlan === 'annual' ? 'Lumina Enterprise' : 'Lumina Pro'}</span>
+              </p>
+            </div>
+
+            <div className="bg-card border border-border/50 rounded-2xl p-5 space-y-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+                </span>
+                5 Dias Grátis
+              </div>
+              <ul className="space-y-2">
+                {[
+                  'Os primeiros 5 dias são completamente gratuitos',
+                  'Cancelas em qualquer altura sem penalização',
+                  'Pagamento seguro via Stripe',
+                ].map(t => (
+                  <li key={t} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Button
+              className="w-full h-12 bg-primary hover:bg-primary/90"
+              disabled={paymentLoading}
+              onClick={handleActivateWithStripe}
+            >
+              {paymentLoading ? <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" /> : <CreditCard className="w-4 h-4 mr-2" />}
+              {paymentLoading ? 'A redirecionar...' : 'Ativar Trial de 5 Dias'}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Processado com segurança pelo Stripe
+            </p>
           </div>
         )}
 

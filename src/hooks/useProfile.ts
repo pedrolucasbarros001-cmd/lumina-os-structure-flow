@@ -38,33 +38,6 @@ export function useProfile() {
         profile = createdProfile;
       }
 
-      // Bootstrap trial only for owner accounts without active/trial subscription
-      if (profile?.user_type !== 'staff') {
-        const { data: subscription, error: subscriptionError } = await supabase
-          .from('subscriptions')
-          .select('id')
-          .eq('owner_id', user.id)
-          .in('status', ['active', 'trial'])
-          .limit(1)
-          .maybeSingle();
-
-        if (subscriptionError) throw subscriptionError;
-
-        if (!subscription) {
-          const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
-          const { error: createSubscriptionError } = await supabase
-            .from('subscriptions')
-            .insert({
-              owner_id: user.id,
-              plan_type: 'monthly',
-              status: 'trial',
-              expires_at: trialEnd,
-            });
-
-          if (createSubscriptionError) throw createSubscriptionError;
-        }
-      }
-
       return profile;
     },
     enabled: !!user,
