@@ -21,7 +21,7 @@ interface MapboxFeature {
   center: [number, number]; // [lng, lat]
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY as string | undefined;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string | undefined;
 
 export default function AddressAutocomplete({ onSelect, placeholder = 'Insira a morada', defaultValue = '' }: AddressAutocompleteProps) {
   const [value, setValue] = useState(defaultValue);
@@ -106,7 +106,7 @@ export default function AddressAutocomplete({ onSelect, placeholder = 'Insira a 
           className="rounded-xl"
         />
         <p className="text-[10px] text-muted-foreground">
-          Configure VITE_GOOGLE_MAPS_KEY (Mapbox token) para sugestões automáticas.
+          Configure VITE_MAPBOX_PUBLIC_TOKEN (Mapbox token) para sugestões automáticas.
         </p>
       </div>
     );

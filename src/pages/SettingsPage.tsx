@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, Bell, Shield, ChevronRight, LogOut, Save, X, Smartphone, Moon, DollarSign, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Bell, Shield, ChevronRight, LogOut, Save, X, Smartphone, Moon, DollarSign, Info, Check } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUnit } from '@/hooks/useUnit';
@@ -8,8 +8,10 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 function SettingsRow({
   icon: Icon,
@@ -53,6 +55,14 @@ export default function SettingsPage() {
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const CURRENCIES = [
+    { code: 'EUR', symbol: '€', label: 'Euro (Portugal)' },
+    { code: 'BRL', symbol: 'R$', label: 'Real Brasileiro' },
+    { code: 'GBP', symbol: '£', label: 'Libra Esterlina' },
+    { code: 'USD', symbol: '$', label: 'Dólar Americano' },
+  ];
 
   const { data: sub } = useQuery({
     queryKey: ['subscription', user?.id],
@@ -79,12 +89,50 @@ export default function SettingsPage() {
 
   const [notifications, setNotifications] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
+  const [currency, setCurrency] = useState('EUR');
+  const [currencySheetOpen, setCurrencySheetOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [fullName, setFullName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
 
   const initials = profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+
+  // Carregar preferências guardadas
+  useEffect(() => {
+    const saved = localStorage.getItem('theme');
+    const isDark = saved ? saved === 'dark' : true;
+    setDarkMode(isDark);
+    document.documentElement.classList.toggle('dark', isDark);
+  }, []);
+
+  useEffect(() => {
+    if (profile?.notifications_enabled !== undefined) {
+      setNotifications(profile.notifications_enabled ?? true);
+    }
+    if ((profile as any)?.currency) {
+      setCurrency((profile as any).currency);
+    }
+  }, [profile]);
+
+  const handleNotificationsChange = async (v: boolean) => {
+    setNotifications(v);
+    if (!user) return;
+    await supabase.from('profiles').update({ notifications_enabled: v } as any).eq('id', user.id);
+  };
+
+  const handleDarkModeChange = (v: boolean) => {
+    setDarkMode(v);
+    document.documentElement.classList.toggle('dark', v);
+    localStorage.setItem('theme', v ? 'dark' : 'light');
+  };
+
+  const handleCurrencyChange = async (code: string) => {
+    setCurrency(code);
+    setCurrencySheetOpen(false);
+    if (!user) return;
+    await supabase.from('profiles').update({ currency: code } as any).eq('id', user.id);
+  };
 
   const handleEditProfile = () => {
     setFullName(profile?.full_name || '');
@@ -163,18 +211,19 @@ export default function SettingsPage() {
             icon={Bell}
             label="Notificações"
             sub="Alertas de agendamento"
-            right={<Switch checked={notifications} onCheckedChange={setNotifications} />}
+            right={<Switch checked={notifications} onCheckedChange={handleNotificationsChange} />}
           />
           <SettingsRow
             icon={Moon}
             label="Modo Escuro"
-            sub="Tema automático (atual: Ativo)"
-            right={<Switch checked={darkMode} onCheckedChange={setDarkMode} />}
+            sub={`Tema atual: ${darkMode ? 'Escuro' : 'Claro'}`}
+            right={<Switch checked={darkMode} onCheckedChange={handleDarkModeChange} />}
           />
           <SettingsRow
             icon={DollarSign}
             label="Moeda"
-            sub="€ EUR (Portugal)"
+            sub={`${CURRENCIES.find(c => c.code === currency)?.symbol} ${currency}`}
+            onClick={() => setCurrencySheetOpen(true)}
           />
         </div>
       </section>
@@ -183,18 +232,42 @@ export default function SettingsPage() {
       {profile?.user_type === 'owner' && (
         <section>
           <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2 px-1">Empresa</p>
-          <div className="bg-card border border-border/50 rounded-2xl p-4 space-y-2">
-            <div>
-              <p className="text-xs text-muted-foreground">Nome</p>
-              <p className="text-sm font-medium">{unit?.name || 'Sua Empresa'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Tipo de Negócio</p>
-              <p className="text-sm font-medium capitalize">{unit?.business_type === 'team' ? 'Com Equipa' : 'Solo'}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Plano</p>
-              <p className="text-sm font-medium">{planLabel}</p>
+          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden">
+            {(unit?.cover_url || unit?.logo_url) && (
+              <div className="relative h-24 bg-muted">
+                {unit.cover_url && (
+                  <img src={unit.cover_url} alt="" className="w-full h-full object-cover" />
+                )}
+                {unit.logo_url && (
+                  <div className="absolute -bottom-5 left-4 w-10 h-10 rounded-xl border-2 border-background overflow-hidden bg-muted">
+                    <img src={unit.logo_url} alt="" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+            )}
+            <div className={cn('p-4 space-y-2', (unit?.cover_url || unit?.logo_url) && 'pt-8')}>
+              <div>
+                <p className="text-xs text-muted-foreground">Nome</p>
+                <p className="text-sm font-medium">{unit?.name || 'Sua Empresa'}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tipo de Negócio</p>
+                <p className="text-sm font-medium">
+                  {unit?.business_type === 'team' ? 'Com Equipa' : 'Independente'}
+                  {unit?.logistics_type === 'home' ? ' · Domícilio' :
+                   unit?.logistics_type === 'hybrid' ? ' · Híbrido' : ''}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Plano</p>
+                <p className="text-sm font-medium">{planLabel}</p>
+              </div>
+              <button
+                onClick={() => navigate('/unit')}
+                className="w-full mt-2 text-xs text-primary font-medium flex items-center justify-center gap-1 py-2 rounded-xl hover:bg-primary/5 transition-colors"
+              >
+                Gerir empresa <ChevronRight className="w-3 h-3" />
+              </button>
             </div>
           </div>
         </section>
@@ -247,6 +320,36 @@ export default function SettingsPage() {
       <div className="text-center py-4">
         <p className="text-xs text-muted-foreground">LUMINA OS v1.0</p>
       </div>
+
+      {/* Currency Sheet */}
+      <Sheet open={currencySheetOpen} onOpenChange={setCurrencySheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl p-0">
+          <SheetHeader className="px-5 pt-5 pb-3">
+            <SheetTitle>Selecionar Moeda</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-8 space-y-2">
+            {CURRENCIES.map(c => (
+              <button
+                key={c.code}
+                onClick={() => handleCurrencyChange(c.code)}
+                className={cn(
+                  'w-full flex items-center justify-between px-4 py-3.5 rounded-2xl border-2 transition-all',
+                  currency === c.code ? 'border-primary bg-primary/5' : 'border-border/50 bg-card hover:border-primary/30'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold w-8">{c.symbol}</span>
+                  <div className="text-left">
+                    <p className="text-sm font-medium">{c.code}</p>
+                    <p className="text-xs text-muted-foreground">{c.label}</p>
+                  </div>
+                </div>
+                {currency === c.code && <Check className="w-4 h-4 text-primary" />}
+              </button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

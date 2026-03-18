@@ -4,7 +4,7 @@ import { Navigation, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { calculateDistance, type Delivery, type DeliveryLocation } from '@/hooks/useDelivery';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
 
 interface DeliveryMapProps {
   delivery: Delivery;

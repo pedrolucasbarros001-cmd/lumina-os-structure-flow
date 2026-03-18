@@ -3,12 +3,14 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { PaywallModal } from '@/components/PaywallModal';
 import { cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
   const { companies, activeCompanyId, setActiveCompanyId, subscription } = useCompany();
   const [open, setOpen] = useState(false);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const active = companies.find(c => c.id === activeCompanyId);
 
@@ -32,9 +34,10 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
     if (!canAddMore) {
       setPaywallOpen(true);
       setOpen(false);
-    } else {
-      // TODO: Navigate to create company flow
+      return;
     }
+    setOpen(false);
+    navigate('/onboarding?new_unit=true');
   };
 
   if (collapsed) {
@@ -63,8 +66,10 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
           {active?.name?.charAt(0)?.toUpperCase() || 'L'}
         </div>
         <div className="flex-1 min-w-0 text-left">
-          <p className="text-sm font-semibold truncate">{active?.name || 'Filial'}</p>
-          <p className="text-[10px] text-muted-foreground">Filial · {planLabel}</p>
+          <p className="text-sm font-semibold truncate">{active?.name || 'Empresa'}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {active?.role === 'owner' ? 'Proprietário' : 'Colaborador'} · {planLabel}
+          </p>
         </div>
         {(companies.length > 1 || canAddMore) && (
           <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", open && "rotate-180")} />

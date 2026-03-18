@@ -45,7 +45,13 @@ export default function Onboarding() {
     }
   }, [profile, profileLoading, navigate]);
 
-  const [step, setStep] = useState<OnboardingStep>(() => user ? 'identity' : 'account');
+  const [step, setStep] = useState<OnboardingStep>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isNewUnit = params.get('new_unit') === 'true';
+    // Se já tem conta (new_unit ou autenticado), começa em identity
+    if (user || isNewUnit) return 'identity';
+    return 'account';
+  });
   const [loading, setLoading] = useState(false);
 
   // Account creation state
@@ -226,6 +232,7 @@ export default function Onboarding() {
 
   const handleFinish = async () => {
     if (!user || !createdUnitId) return;
+    const isNewUnit = new URLSearchParams(window.location.search).get('new_unit') === 'true';
     setLoading(true);
     try {
       await supabase.from('units').update({ business_hours: hours }).eq('id', createdUnitId);
@@ -238,11 +245,27 @@ export default function Onboarding() {
         linked_unit_id: createdUnitId,
       }).eq('id', user.id);
 
+      // Segunda unidade: subscrição já existe, não vai para pagamento
+      if (isNewUnit) {
+        if (!profile?.onboarding_completed) {
+          await supabase.from('profiles').update({
+            onboarding_completed: true,
+            setup_completed: true,
+          }).eq('id', user.id);
+        }
+        await queryClient.invalidateQueries();
+        navigate('/agenda', { replace: true });
+        return;
+      }
+
       setStep('payment');
     } catch (error) {
       console.error('Finish error:', error);
       toast({ variant: 'destructive', title: 'Erro ao guardar configurações.' });
     } finally {
+      setLoading(false);
+    }
+  };
       setLoading(false);
     }
   };

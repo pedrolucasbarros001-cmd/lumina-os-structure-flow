@@ -9,7 +9,7 @@ interface AddressMapProps {
   showNavigateButton?: boolean;
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY as string;
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
 
 export default function AddressMap({ address, label, className = '', showNavigateButton = true }: AddressMapProps) {
   const [coords, setCoords] = useState<[number, number] | null>(null);

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { format, addDays, subDays, parseISO, startOfWeek, isSameDay, isToday } from 'date-fns';
 import { pt } from 'date-fns/locale';
-import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Filter, MapPin, X, Menu, Clock } from 'lucide-react';
 import { useAppointments, Appointment, useUpdateAppointmentStatus, useUpdateAppointment } from '@/hooks/useAppointments';
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
@@ -43,6 +43,11 @@ function timeToMinutes(dateStr: string): number {
 
 function minutesToTop(minutes: number): number {
   return ((minutes - START_HOUR * 60) / 60) * HOUR_HEIGHT;
+}
+
+function isHourPast(hour: number, selectedDate: Date): boolean {
+  if (!isToday(selectedDate)) return false;
+  return hour < new Date().getHours();
 }
 
 function durationToHeight(duration: number): number {
@@ -378,14 +383,46 @@ export default function Agenda() {
     setRescheduleTarget(null);
   };
 
-  // Scroll to 8am on mount
+  // ─── Auto-scroll para a hora actual ───
   const scrollInitialized = useRef(false);
+  const userScrolling = useRef(false);
+  const userScrollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const scrollToCurrentTime = useCallback(() => {
+    if (!gridRef.current) return;
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    const targetTop = minutesToTop(minutes) - (gridRef.current.clientHeight / 2) + 40;
+    gridRef.current.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+  }, []);
+
   useEffect(() => {
     if (!scrollInitialized.current && gridRef.current) {
-      gridRef.current.scrollTop = 8 * HOUR_HEIGHT;
-      scrollInitialized.current = true;
+      setTimeout(() => {
+        scrollToCurrentTime();
+        scrollInitialized.current = true;
+      }, 150);
     }
-  }, []);
+  }, [scrollToCurrentTime]);
+
+  // Auto-follow cada 60s quando é hoje e utilizador não está a fazer scroll
+  useEffect(() => {
+    if (!isToday(selected)) return;
+    const interval = setInterval(() => {
+      if (!userScrolling.current) scrollToCurrentTime();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [selected, scrollToCurrentTime]);
+
+  const handleGridScroll = useCallback(() => {
+    if (!scrollInitialized.current) return;
+    userScrolling.current = true;
+    if (userScrollTimer.current) clearTimeout(userScrollTimer.current);
+    userScrollTimer.current = setTimeout(() => {
+      userScrolling.current = false;
+      if (isToday(selected)) scrollToCurrentTime();
+    }, 8000);
+  }, [selected, scrollToCurrentTime]);
 
   // Swipe detection
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -403,7 +440,11 @@ export default function Agenda() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-56px)] relative">
+    <div
+      className="flex flex-col h-[calc(100vh-56px)] relative"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {showTutorial && <AgendaTutorialOverlay onFinish={dismissTutorial} />}
 
       {/* ─── Header ─── */}
@@ -437,6 +478,15 @@ export default function Agenda() {
             <button onClick={goNext} className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
               <ChevronRight className="w-4 h-4" />
             </button>
+            {isToday(selected) && (
+              <button
+                onClick={() => { userScrolling.current = false; scrollToCurrentTime(); }}
+                className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
+                title="Ir para agora"
+              >
+                <Clock className="w-4 h-4 text-destructive" />
+              </button>
+            )}
             <button className="w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center">
               <Filter className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -487,23 +537,37 @@ export default function Agenda() {
           dragAppt ? "overflow-y-hidden" : "overflow-y-auto"
         )}
         style={{ touchAction: dragAppt ? 'none' : 'manipulation' }}
+        onScroll={handleGridScroll}
         onPointerDown={handleGridPointerDown}
         onPointerMove={handleGridPointerMove}
         onPointerUp={handleGridPointerUp}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
       >
         <div className="relative" style={{ height: `${(END_HOUR - START_HOUR) * HOUR_HEIGHT}px` }}>
-          {hours.map(h => (
-            <div key={h} className="absolute left-0 right-0 border-t border-border/30"
-              style={{ top: `${(h - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}>
-              <span className="absolute text-[10px] text-muted-foreground font-mono" style={{ left: 8, top: -6 }}>
-                {String(h).padStart(2, '0')}:00
-              </span>
-              <div className="absolute left-0 right-0 border-t border-border/15"
-                style={{ top: `${HOUR_HEIGHT / 2}px`, left: `${TIME_LABEL_WIDTH}px` }} />
-            </div>
-          ))}
+          {hours.map(h => {
+            const past = isHourPast(h, selected);
+            return (
+              <div
+                key={h}
+                className={cn(
+                  'absolute left-0 right-0 border-t border-border/30 transition-opacity duration-300',
+                  past && 'opacity-30'
+                )}
+                style={{ top: `${(h - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+              >
+                <span
+                  className={cn(
+                    'absolute text-[10px] font-mono',
+                    past ? 'text-muted-foreground/50' : 'text-muted-foreground'
+                  )}
+                  style={{ left: 8, top: -6 }}
+                >
+                  {String(h).padStart(2, '0')}:00
+                </span>
+                <div className="absolute left-0 right-0 border-t border-border/15"
+                  style={{ top: `${HOUR_HEIGHT / 2}px`, left: `${TIME_LABEL_WIDTH}px` }} />
+              </div>
+            );
+          })}
 
           {/* Column dividers */}
           {columns.map((_, i) => (

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, Star, Clock, Check, Building2, Car, ChevronLeft, User, Mail, Phone, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { usePublicUnit } from '@/hooks/usePublicUnit';
@@ -119,9 +120,13 @@ export default function PublicBooking() {
     const serviceIds = selectedServices.map(s => s.id);
     return team.filter(m => {
       const memberServiceIds = (m.team_member_services || []).map((ts: any) => ts.service_id);
-      return serviceIds.every(sid => memberServiceIds.includes(sid));
+      const hasAllServices = serviceIds.every(sid => memberServiceIds.includes(sid));
+      if (!hasAllServices) return false;
+      // Para domícilio, só mostra quem aceita
+      if (logistics === 'home' && !m.accepts_home_visits) return false;
+      return true;
     });
-  }, [team, selectedServices]);
+  }, [team, selectedServices, logistics]);
 
   const days = useMemo(() => {
     const result = [];
@@ -306,7 +311,7 @@ export default function PublicBooking() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 px-6">
         <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center animate-scale-in">
           <Check className="w-10 h-10 text-emerald-400" />
         </div>
@@ -314,6 +319,12 @@ export default function PublicBooking() {
         <p className="text-sm text-muted-foreground text-center max-w-xs">
           Receberá uma confirmação em breve. Obrigado por agendar connosco.
         </p>
+        {isHome && (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm mt-2 max-w-xs">
+            <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
+            <p>O profissional entrará em contacto consigo antes de se deslocar. Tenha o telefone disponível.</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -529,10 +540,10 @@ export default function PublicBooking() {
             )}
 
             {/* Static map preview */}
-            {clientLat !== 0 && clientLng !== 0 && import.meta.env.VITE_GOOGLE_MAPS_KEY && (
+            {clientLat !== 0 && clientLng !== 0 && import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN && (
               <div className="rounded-2xl overflow-hidden border border-border/50">
                 <img
-                  src={`https://maps.googleapis.com/maps/api/staticmap?center=${clientLat},${clientLng}&zoom=15&size=600x200&markers=color:red|${clientLat},${clientLng}&key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}`}
+                  src={`https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/pin-s+ef4444(${clientLng},${clientLat})/${clientLng},${clientLat},15,0/600x200@2x?access_token=${import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN}`}
                   alt="Localização"
                   className="w-full h-[150px] object-cover"
                 />
