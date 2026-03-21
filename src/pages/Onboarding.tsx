@@ -266,9 +266,6 @@ export default function Onboarding() {
       setLoading(false);
     }
   };
-      setLoading(false);
-    }
-  };
 
   if (profileLoading || profile?.onboarding_completed) {
     return (
