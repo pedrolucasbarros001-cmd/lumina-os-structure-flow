@@ -211,16 +211,14 @@ export const deliveryAPI = {
   },
 
   /**
-   * Calcular ETA (tempo estimado de chegada)
+   * Calcular distância entre dois pontos (Haversine)
    */
-  calculateETA(
+  calculateDistance(
     driverLat: number,
     driverLon: number,
     customerLat: number,
-    customerLon: number,
-    avgSpeedKmH: number = 40 // velocidade média em cidade
+    customerLon: number
   ): number {
-    // Haversine distance
     const R = 6371; // km
     const dLat = ((customerLat - driverLat) * Math.PI) / 180;
     const dLon = ((customerLon - driverLon) * Math.PI) / 180;
@@ -232,7 +230,20 @@ export const deliveryAPI = {
         Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
+    return distance;
+  },
 
+  /**
+   * Calcular ETA (tempo estimado de chegada)
+   */
+  calculateETA(
+    driverLat: number,
+    driverLon: number,
+    customerLat: number,
+    customerLon: number,
+    avgSpeedKmH: number = 40 // velocidade média em cidade
+  ): number {
+    const distance = this.calculateDistance(driverLat, driverLon, customerLat, customerLon);
     // Calculate ETA in minutes
     const timeMinutes = (distance / avgSpeedKmH) * 60;
     return Math.round(timeMinutes);

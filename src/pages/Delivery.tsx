@@ -1,69 +1,36 @@
 // @ts-nocheck
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import DeliveryMap from '@/components/DeliveryMap';
-import DeliveryStatus from '@/components/DeliveryStatus';
+import { DeliveryGPSModal } from '@/components/DeliveryGPSModal';
 import {
   useDelivery,
   useStartDelivery,
-  useCurrentLocation,
-  useUpdateDriverLocation,
-  useDeliveryRealtime,
-  type DeliveryLocation,
 } from '@/hooks/useDelivery';
-import { deliveryAPI } from '@/lib/deliveryAPI';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function Delivery() {
   const { deliveryId } = useParams<{ deliveryId: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const { data: delivery, isLoading, error } = useDelivery(deliveryId || '');
   const startDeliveryMutation = useStartDelivery();
-  const updateLocationMutation = useUpdateDriverLocation();
-  const { getLocation, watchLocation } = useCurrentLocation();
-  const [driverLocation, setDriverLocation] = useState<DeliveryLocation | undefined>();
-  const [isTracking, setIsTracking] = useState(false);
+  const [showGPSModal, setShowGPSModal] = useState(false);
 
-  useDeliveryRealtime(deliveryId || '', () => {});
-
-  const handleStartDelivery = async () => {
-    if (!deliveryId) return;
-    try {
-      const location = await getLocation();
-      setDriverLocation(location);
-      await startDeliveryMutation.mutateAsync(deliveryId);
-      setIsTracking(true);
-      watchLocation((loc) => {
-        setDriverLocation(loc);
-        updateLocationMutation.mutate({ deliveryId, lat: loc.latitude, lon: loc.longitude });
-      });
-      toast({ title: 'Entrega iniciada', description: 'GPS ativo.' });
-    } catch (err) {
-      toast({ title: 'Erro', description: err instanceof Error ? err.message : 'Erro ao iniciar', variant: 'destructive' });
+  // Abre o modal de GPS automaticamente quando o delivery carrega
+  useEffect(() => {
+    if (delivery && delivery.status === 'en_route') {
+      setShowGPSModal(true);
     }
-  };
+  }, [delivery]);
 
-  const handleCheckIn = async () => {
-    if (!deliveryId) return;
-    try {
-      const location = await getLocation();
-      await deliveryAPI.checkIn(deliveryId, location.latitude, location.longitude);
-      toast({ title: 'Check-in feito', description: 'Chegou ao destino!' });
-    } catch (err) {
-      toast({ title: 'Erro', description: err instanceof Error ? err.message : 'Erro no check-in', variant: 'destructive' });
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!delivery) return;
-    try {
-      await deliveryAPI.completeDelivery(delivery.id, delivery.appointment_id);
-      toast({ title: 'Entrega concluída!' });
-    } catch (err) {
-      toast({ title: 'Erro', description: err instanceof Error ? err.message : 'Erro ao completar', variant: 'destructive' });
-    }
+  const handleCloseModal = () => {
+    setShowGPSModal(false);
+    // Redireciona para a página anterior após fechar o modal
+    setTimeout(() => {
+      navigate(-1);
+    }, 500);
   };
 
   if (error) {
@@ -90,22 +57,23 @@ export default function Delivery() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        <h1 className="text-2xl font-bold">Rastreamento de Entrega</h1>
-        <div className="h-72 md:h-96 w-full">
-          <DeliveryMap delivery={delivery} driverLocation={driverLocation} />
+    <>
+      {/* Modal de GPS dedicado */}
+      <DeliveryGPSModal 
+        delivery={delivery} 
+        isOpen={showGPSModal}
+        onClose={handleCloseModal}
+      />
+
+      {/* Página de fallback (se modal fechar) */}
+      {!showGPSModal && (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Redirecionando...</p>
+          </div>
         </div>
-        <DeliveryStatus
-          delivery={delivery}
-          isLoading={startDeliveryMutation.isPending || updateLocationMutation.isPending}
-          canStart={!delivery.started_at}
-          canComplete={delivery.status === 'arrived'}
-          onStart={handleStartDelivery}
-          onCheckIn={handleCheckIn}
-          onComplete={handleComplete}
-        />
-      </div>
-    </div>
+      )}
+    </>
   );
 }
