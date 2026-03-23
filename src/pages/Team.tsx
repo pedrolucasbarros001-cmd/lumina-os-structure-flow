@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import EditTeamMemberSheet from '@/components/EditTeamMemberSheet';
 
 // Hook to check pending invitations
 function usePendingInvitations() {
@@ -499,7 +500,7 @@ function MemberServicesSheet({ open, onClose, member }: { open: boolean; onClose
 }
 
 const MemberCardWrapper = ({ member }: { member: TeamMember }) => {
-  const [editServicesOpen, setEditServicesOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const { data: memberServices = [] } = useTeamMemberServices(member.id);
   const { data: appointments = [] } = useAppointments();
   const queryClient = useQueryClient();
@@ -556,7 +557,7 @@ const MemberCardWrapper = ({ member }: { member: TeamMember }) => {
           <Button
             size="icon"
             variant="outline"
-            onClick={() => setEditServicesOpen(true)}
+            onClick={() => setEditOpen(true)}
           >
             <Edit2 className="w-4 h-4" />
           </Button>
@@ -572,9 +573,9 @@ const MemberCardWrapper = ({ member }: { member: TeamMember }) => {
         </div>
       </div>
       
-      <MemberServicesSheet 
-        open={editServicesOpen} 
-        onClose={() => setEditServicesOpen(false)}
+      <EditTeamMemberSheet 
+        open={editOpen} 
+        onClose={() => setEditOpen(false)}
         member={member}
       />
     </>
