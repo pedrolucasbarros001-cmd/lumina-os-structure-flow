@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { LuminaLogo } from '@/components/LuminaLogo';
 
 export default function Signup() {
   const { t } = useTranslation();
@@ -67,11 +68,9 @@ export default function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border/50 shadow-xl glass-card">
-        <CardHeader className="text-center space-y-2">
-          <div className="mx-auto mb-4">
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              LUMINA OS
-            </h1>
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto mb-2 flex justify-center">
+            <LuminaLogo variant="icon-only" size="lg" showGradient={true} />
           </div>
           <CardTitle className="text-xl">{t('auth.signupTitle')}</CardTitle>
           <CardDescription>{t('auth.signupSubtitle')}</CardDescription>

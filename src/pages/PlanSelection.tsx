@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Check, ArrowRight, Zap } from 'lucide-react';
+import { Check, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { LuminaLogo } from '@/components/LuminaLogo';
 
 const PLANS = [
   {
@@ -22,6 +23,7 @@ const PLANS = [
       'Página de agendamento online pública',
       'Painel financeiro e relatórios',
       'Até 4 colaboradores por unidade',
+      'Modo delivery completo com rastreamento',
       '1 unidade incluída',
     ],
   },
@@ -35,11 +37,11 @@ const PLANS = [
     highlight: true,
     badge: 'Mais Popular',
     Icon: Sparkles,
-    limits: 'até 3 unidades · colaboradores ilimitados',
+    limits: 'até 3 unidades · até 4 colaboradores cada',
     features: [
       'Tudo do Pro',
       'Até 3 unidades independentes',
-      'Colaboradores ilimitados por unidade',
+      'Até 4 colaboradores por unidade',
       'Modo delivery completo com rastreamento',
       'Dashboard de métricas de delivery',
       'Suporte prioritário',
@@ -57,16 +59,12 @@ export default function PlanSelection() {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Orbs */}
-      <div className="absolute top-0 -left-20 w-96 h-96 bg-primary/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute bottom-0 -right-20 w-96 h-96 bg-accent/15 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="w-full max-w-4xl z-10 space-y-10">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary text-sm font-medium mb-2">
-            <Sparkles className="w-3.5 h-3.5" />
-            LUMINA OS
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <LuminaLogo variant="icon-only" size="xl" showGradient={true} />
           </div>
           <h1 className="text-4xl font-black tracking-tight">
             Escolhe o teu plano

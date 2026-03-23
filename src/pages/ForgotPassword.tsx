@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, ArrowLeft } from 'lucide-react';
+import { LuminaLogo } from '@/components/LuminaLogo';
 
 export default function ForgotPassword() {
   const { t } = useTranslation();
@@ -32,7 +33,10 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-border/50 shadow-xl">
-        <CardHeader className="text-center space-y-2">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto mb-2 flex justify-center">
+            <LuminaLogo variant="icon-only" size="lg" showGradient={true} />
+          </div>
           <CardTitle className="text-xl">{t('auth.resetTitle')}</CardTitle>
           <CardDescription>{t('auth.resetSubtitle')}</CardDescription>
         </CardHeader>

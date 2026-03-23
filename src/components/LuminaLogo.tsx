@@ -45,18 +45,25 @@ export function LuminaLogo({
 
   const sizeConfig = sizes[size];
 
-  // Ícone L em quadrado arredondado com gradiente
+  // Ícone L em quadrado arredondado com gradiente - COM PONTO NO TOPO
   const IconComponent = () => (
     <div
       className={cn(
         sizeConfig.icon,
-        'rounded-[10px] flex items-center justify-center font-black text-white shrink-0',
+        'rounded-[16px] flex items-center justify-center font-black text-white shrink-0 relative',
         showGradient ? 'lumina-gradient' : 'bg-primary'
       )}
       style={{
         fontSize: size === 'sm' ? '14px' : size === 'md' ? '18px' : size === 'lg' ? '24px' : '32px',
       }}
     >
+      {/* Ponto no topo */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full" 
+        style={{
+          width: size === 'sm' ? '3px' : size === 'md' ? '4px' : size === 'lg' ? '5px' : '6px',
+          height: size === 'sm' ? '3px' : size === 'md' ? '4px' : size === 'lg' ? '5px' : '6px',
+        }}
+      />
       L
     </div>
   );
