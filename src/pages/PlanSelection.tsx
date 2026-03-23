@@ -59,9 +59,6 @@ export default function PlanSelection() {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      {/* Textura background grid subtil - sem divisões visuais */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
-
       <div className="w-full max-w-4xl z-10 space-y-10">
         {/* Header */}
         <div className="text-center space-y-6">
