@@ -1,57 +1,26 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Plus, Building2 } from 'lucide-react';
+import { Outlet } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import QuickActionSheet from '@/components/QuickActionSheet';
-import { useUnit } from '@/hooks/useUnit';
 import { MobileBottomNav } from '@/components/MobileBottomNav';
 import { cn } from '@/lib/utils';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/agenda': 'Agenda',
-  '/appointments': 'Atendimentos',
-  '/clients': 'Clientes',
-  '/team': 'Equipa',
-  '/catalogo': 'Catálogo',
-  '/vendas': 'Vendas',
-  '/unit': 'A Minha Empresa',
-  '/settings': 'Configurações',
-};
-
 export default function MobileLayout() {
   const [fabOpen, setFabOpen] = useState(false);
-  const location = useLocation();
-  const title = PAGE_TITLES[location.pathname] ?? 'LUMINA OS';
-  const isAgenda = location.pathname === '/agenda';
-  const { data: unit } = useUnit();
-  const showFab = ['/dashboard', '/agenda', '/clients'].includes(location.pathname);
+  const showFab = true; // Show FAB on all pages for now
 
   return (
-    <div className="min-h-screen flex flex-col w-full bg-background">
-      {/* Header */}
-      {!isAgenda && (
-        <header className="flex flex-col border-b border-border/30 sticky top-0 z-20 glass-surface bg-background/95 backdrop-blur-md">
-          <div className="h-14 md:h-16 flex items-center px-4 md:px-6 gap-3 min-w-0">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm md:text-base font-semibold truncate text-foreground">{title}</h1>
-            </div>
-          </div>
-          {unit && (
-            <div className="border-t border-border/20 px-4 md:px-6 py-2.5 bg-muted/30">
-              <div className="flex items-center gap-2 text-xs md:text-xs text-muted-foreground min-w-0">
-                <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="font-medium truncate">{unit.name}</span>
-              </div>
-            </div>
-          )}
-        </header>
-      )}
-
-      {/* Main Content */}
-      <main className={cn(
-        "flex-1 overflow-y-auto overflow-x-hidden w-full safe-area-bottom",
-        showFab ? "pb-32 md:pb-24" : "pb-24 md:pb-20"
-      )}>
+    <div className="w-full h-screen flex flex-col overflow-hidden bg-background">
+      {/* Header - removed for agenda to maximize space */}
+      
+      {/* Main Content Area - flex with proper overflow handling */}
+      <main
+        className={cn(
+          "flex-1 overflow-y-auto overflow-x-hidden w-full relative",
+          showFab ? "pb-32 md:pb-24" : "pb-24 md:pb-20",
+          "safe-area-bottom"
+        )}
+      >
         <Outlet />
       </main>
 

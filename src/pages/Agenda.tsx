@@ -441,7 +441,7 @@ export default function Agenda() {
 
   return (
     <div
-      className="flex flex-col h-[calc(100vh-56px)] relative"
+      className="flex flex-col h-screen w-full relative"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
