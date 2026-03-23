@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { MapPin, Loader2, AlertCircle, X } from 'lucide-react';
+import { MapPin, Loader2, AlertCircle, X, Navigation } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { deliveryAPI } from '@/lib/deliveryAPI';
+import { cn } from '@/lib/utils';
 
 interface DeliveryGPSModalProps {
   delivery: any;
@@ -116,120 +117,129 @@ export function DeliveryGPSModal({ delivery, onClose, isOpen }: DeliveryGPSModal
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md h-[90vh] max-h-[900px] bg-background rounded-2xl shadow-2xl flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-white">
-            <MapPin className="w-5 h-5" />
-            <div>
-              <h2 className="font-bold">Rastreamento GPS</h2>
-              <p className="text-sm text-blue-100">{delivery.customer_address}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded">
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-md p-4 safe-area-bottom">
+      <div className="w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-white/10 animate-in fade-in slide-in-from-bottom-4 md:animate-none md:fade-in md:zoom-in">
+        
+        {/* Close Button */}
+        <button 
+          onClick={onClose}
+          className="absolute top-4 left-4 z-10 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+        >
+          <X className="w-5 h-5 text-white" />
+        </button>
+
+        {/* Top Section - Info */}
+        <div className="px-6 pt-8 pb-4 text-center">
+          <h2 className="text-xl font-bold text-white mb-1">
+            Entrega a caminho
+          </h2>
+          <p className="text-sm text-slate-300">
+            {delivery.customer_name}
+          </p>
         </div>
 
-        {/* Mapa/GPS Simulado */}
-        <div className="flex-1 bg-gradient-to-b from-sky-100 to-blue-50 flex flex-col items-center justify-center relative overflow-hidden">
-          {/* Fundo estilizado como mapa */}
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-1/4 left-1/3 w-32 h-32 bg-gray-300 rounded-full blur-2xl"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-blue-200 rounded-full blur-3xl"></div>
-          </div>
-
-          {/* Conteúdo GPS */}
-          <div className="relative z-10 flex flex-col items-center gap-6">
-            {loading ? (
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                <p className="text-gray-600 font-medium">Ativando GPS...</p>
+        {/* Map Area / GPS Display */}
+        <div className="mx-4 h-64 bg-gradient-to-b from-slate-800 to-slate-700 rounded-2xl overflow-hidden relative border border-white/5 flex items-center justify-center">
+          {loading ? (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="w-10 h-10 text-blue-400 animate-spin" />
+              <p className="text-slate-300 font-medium text-sm">Ativando GPS...</p>
+            </div>
+          ) : driverLocation ? (
+            <>
+              {/* Mapa background (placeholder) */}
+              <div className="absolute inset-0 opacity-20">
+                <div className="absolute top-1/4 left-1/3 w-32 h-32 bg-blue-500 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-purple-500 rounded-full blur-3xl"></div>
               </div>
-            ) : driverLocation ? (
-              <>
-                {/* Marcador de GPS */}
-                <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-30 rounded-full w-20 h-20"></div>
-                  <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
-                    <div className="w-12 h-12 bg-blue-400 rounded-full flex items-center justify-center">
-                      <MapPin className="w-6 h-6 text-white" />
+
+              {/* GPS Marker */}
+              <div className="relative z-10 text-center">
+                <div className="relative inline-block mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-400 blur-xl opacity-40 rounded-full w-24 h-24"></div>
+                  <div className="relative w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center shadow-lg">
+                    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center">
+                      <Navigation className="w-7 h-7 text-blue-300" />
                     </div>
                   </div>
                 </div>
 
-                {/* Info de Distância e ETA */}
-                <div className="text-center">
-                  {distance !== null && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600">Distância até destino</p>
-                      <p className="text-3xl font-bold text-blue-600">
-                        {distance.toFixed(2)} km
-                      </p>
-                    </div>
-                  )}
+                {distance !== null && (
+                  <div className="mt-4">
+                    <p className="text-slate-400 text-xs font-medium mb-1">DISTÂNCIA</p>
+                    <p className="text-2xl font-bold text-white">
+                      {distance < 1 
+                        ? `${Math.round(distance * 1000)}m` 
+                        : `${distance.toFixed(1)}km`
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <AlertCircle className="w-10 h-10 text-amber-500" />
+              <p className="font-semibold text-white text-sm">GPS não disponível</p>
+              <p className="text-xs text-slate-400 text-center max-w-xs">
+                Verifique se o GPS está ativado
+              </p>
+            </div>
+          )}
+        </div>
 
-                  {eta !== null && (
-                    <div>
-                      <p className="text-sm text-gray-600">Tempo estimado</p>
-                      <p className="text-2xl font-bold text-purple-600">{eta} min</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Coordenadas */}
-                <div className="text-xs text-gray-500 text-center">
-                  <p>Lat: {driverLocation.lat.toFixed(6)}</p>
-                  <p>Lon: {driverLocation.lon.toFixed(6)}</p>
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-orange-600">
-                <AlertCircle className="w-12 h-12" />
-                <p className="font-medium">GPS não disponível</p>
-                <p className="text-sm text-center text-gray-600">
-                  Verifique se o GPS está ativado no seu dispositivo
-                </p>
+        {/* Info Section */}
+        <div className="mx-4 mt-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+          <div className="grid grid-cols-2 gap-4">
+            {eta !== null && (
+              <div className="text-center">
+                <p className="text-slate-400 text-xs font-medium mb-1">TEMPO ESTIMADO</p>
+                <p className="text-2xl font-bold text-cyan-300">{eta}min</p>
               </div>
             )}
+            <div className="text-center">
+              <p className="text-slate-400 text-xs font-medium mb-1">DESTINO</p>
+              <p className="text-sm font-semibold text-white truncate">{delivery.customer_address}</p>
+            </div>
           </div>
         </div>
 
-        {/* Footer - Botão Check-in */}
-        <div className="bg-background border-t p-4 space-y-3">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-xs text-blue-600">
-              Você receberá uma notificação quando estiver próximo de <strong>200m</strong> do destino.
-            </p>
-          </div>
-
+        {/* Action Buttons */}
+        <div className="px-4 py-4 flex gap-3">
           <Button
-            onClick={handleCheckIn}
-            disabled={!driverLocation || checkingIn}
-            className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg"
-          >
-            {checkingIn ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Fazendo Check-in...
-              </>
-            ) : (
-              <>
-                <MapPin className="w-4 h-4 mr-2" />
-                Cheguei no Destino
-              </>
-            )}
-          </Button>
-
-          <Button
+            variant="ghost"
             onClick={onClose}
-            variant="outline"
-            className="w-full"
+            className="flex-1 rounded-2xl h-12 border border-white/20 hover:bg-white/10 text-white"
           >
             Fechar
           </Button>
+          <Button
+            onClick={handleCheckIn}
+            disabled={checkingIn || loading}
+            className={cn(
+              "flex-1 rounded-2xl h-12 font-semibold gap-2",
+              "bg-gradient-to-r from-emerald-500 to-teal-500",
+              "hover:from-emerald-600 hover:to-teal-600",
+              "shadow-lg shadow-emerald-500/30",
+              "disabled:opacity-50 disabled:cursor-not-allowed"
+            )}
+          >
+            {checkingIn ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <MapPin className="w-4 h-4" />
+                Chegou!
+              </>
+            )}
+          </Button>
         </div>
+
+        {/* Safe Area Spacing */}
+        <div className="h-safe" />
       </div>
     </div>
   );
