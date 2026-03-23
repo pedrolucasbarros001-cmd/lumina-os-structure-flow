@@ -56,18 +56,19 @@ export function LuminaLogo({
     >
       <svg 
         viewBox="0 0 64 64" 
-        className="w-full h-full p-2"
+        className="w-full h-full"
         fill="none"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Ponto no topo */}
-        <circle cx="32" cy="16" r="5.5" fill="white" />
+        {/* Ponto branco - subtil, no topo */}
+        <circle cx="32" cy="10" r="3" fill="white" />
         
-        {/* L com linhas mais proporcionadas */}
-        <g stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-          {/* Vertical do L */}
-          <line x1="24" y1="24" x2="24" y2="52" />
-          {/* Horizontal do L */}
-          <line x1="24" y1="52" x2="44" y2="52" />
+        {/* L - Letra "L" proporcional e clara */}
+        <g stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+          {/* Linha vertical (tronco do L) */}
+          <line x1="22" y1="20" x2="22" y2="54" />
+          {/* Linha horizontal (base do L) */}
+          <line x1="22" y1="54" x2="42" y2="54" />
         </g>
       </svg>
     </div>

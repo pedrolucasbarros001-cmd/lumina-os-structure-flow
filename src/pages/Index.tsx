@@ -13,7 +13,9 @@ export default function Index() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#09090b] to-[#1a1a2e] text-white flex flex-col items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Textura background grid subtil - sem divisões visuais */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
 
       <nav className="fixed top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
         <div className="flex items-center">
