@@ -58,8 +58,8 @@ export default function PlanSelection() {
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
-      <div className="w-full max-w-4xl z-10 space-y-10">
+    <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center relative overflow-hidden">
+      <div className="w-full max-w-4xl z-10 space-y-10 px-6 pt-20">
         {/* Header */}
         <div className="text-center space-y-6">
           <div className="flex justify-center">

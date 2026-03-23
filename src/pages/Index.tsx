@@ -25,9 +25,9 @@ export default function Index() {
         </div>
       </nav>
 
-      <main className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8 mt-16">
+      <main className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8">
         {/* Logo principal em destaque */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-8 mt-24">
           <LuminaLogo variant="icon-only" size="xl" showGradient={true} />
         </div>
 
