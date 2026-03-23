@@ -7,14 +7,26 @@
   /* Override das cores primárias Tailwind */
   --primary: 259 90% 48% !important; /* Roxo Lumina */
   --accent: 259 90% 48% !important; /* Roxo Lumina */
+
+  /* Safe area inset (iPhone notch/home indicator) */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
 #root {
   width: 100%;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   margin: 0;
   padding: 0;
   text-align: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 /* Gradiente: aplicável via classe */
@@ -41,19 +53,53 @@
   opacity: 0.95;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Safe area support for iPhone notch/home indicator */
+.h-safe {
+  height: max(env(safe-area-inset-bottom), 1rem);
+  pointer-events: none;
 }
 
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Haptic feedback visual indicator */
+.haptic-press {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.haptic-press:active {
+  transform: scale(0.95);
+}
+
+/* Glass morphism cards */
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-surface {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(8px);
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 769px) {
+  body {
+    font-size: 15px;
+  }
+}
+
+/* Animations */
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
@@ -61,6 +107,33 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+@keyframes slide-in-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Logo styles */
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -75,4 +148,39 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Fix for scroll issues on iOS */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input, select, textarea, button {
+  font-size: 16px;
+}
+
+/* Better scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }

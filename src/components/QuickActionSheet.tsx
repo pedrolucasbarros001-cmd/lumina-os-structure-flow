@@ -89,51 +89,76 @@ export default function QuickActionSheet({ open, onClose }: QuickActionSheetProp
                 onClick={onClose}
             />
 
-            {/* Sheet */}
+            {/* Sheet — iOS-like bottom sheet with safe area */}
             <div
                 className={cn(
                     'fixed bottom-0 left-0 right-0 z-50 transition-all duration-500 ease-out',
+                    'max-h-[85vh] md:max-h-[70vh]',
                     open ? 'translate-y-0' : 'translate-y-full'
                 )}
             >
-                <div className="mx-auto max-w-lg px-4 pb-8">
-                    {/* Handle */}
-                    <div className="flex justify-center mb-4">
-                        <div className="w-12 h-1 rounded-full bg-white/30" />
+                <div className="mx-auto w-full max-w-lg rounded-t-3xl md:rounded-2xl bg-background/95 backdrop-blur-xl border border-border/30 shadow-2xl">
+                    {/* Handle Bar — iPhone-style */}
+                    <div className="flex justify-center pt-3 pb-1">
+                        <div className="w-10 h-1 rounded-full bg-muted/40" />
                     </div>
 
-                    <div className="space-y-3">
-                        {actions.map((action, i) => (
+                    {/* Content with scrollable area */}
+                    <div className="px-4 md:px-6 pb-6 md:pb-8 max-h-[calc(85vh-60px)] overflow-y-auto">
+                        <div className="space-y-2 md:space-y-3 mt-2">
+                            {actions.map((action, i) => (
+                                <button
+                                    key={action.id}
+                                    onClick={() => handleAction(action.id)}
+                                    className={cn(
+                                        'w-full flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-xl md:rounded-2xl',
+                                        'bg-card/60 backdrop-blur-md border border-border/50',
+                                        'hover:bg-card/80 active:scale-95',
+                                        'transition-all duration-200 ease-out',
+                                        'animate-in slide-in-from-bottom-4',
+                                    )}
+                                    style={{ animationDelay: `${i * 60}ms` }}
+                                >
+                                    <div className={cn(
+                                        'w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl',
+                                        'bg-gradient-to-br flex items-center justify-center flex-shrink-0',
+                                        'shadow-md',
+                                        action.color
+                                    )}>
+                                        <action.icon className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                                    </div>
+                                    <div className="text-left flex-1 min-w-0">
+                                        <p className="font-semibold text-foreground text-sm md:text-base">{action.label}</p>
+                                        <p className="text-xs md:text-xs text-muted-foreground leading-tight">{action.sublabel}</p>
+                                    </div>
+                                    <div className="text-muted-foreground/30 ml-auto">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </div>
+                                </button>
+                            ))}
+
                             <button
-                                key={action.id}
-                                onClick={() => handleAction(action.id)}
+                                onClick={onClose}
                                 className={cn(
-                                    'w-full flex items-center gap-4 p-4 rounded-2xl',
-                                    'bg-card/80 backdrop-blur-md border border-white/10',
-                                    'hover:scale-[1.02] active:scale-[0.98]',
+                                    'w-full flex items-center justify-center gap-2 p-3 md:p-4',
+                                    'rounded-xl md:rounded-2xl',
+                                    'bg-muted/40 hover:bg-muted/60',
+                                    'text-muted-foreground hover:text-foreground',
                                     'transition-all duration-200',
-                                    'animate-in slide-in-from-bottom-4',
+                                    'border border-border/30',
+                                    'mt-2 md:mt-4 font-medium'
                                 )}
-                                style={{ animationDelay: `${i * 60}ms` }}
                             >
-                                <div className={cn('w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center flex-shrink-0', action.color)}>
-                                    <action.icon className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-semibold text-foreground">{action.label}</p>
-                                    <p className="text-xs text-muted-foreground">{action.sublabel}</p>
-                                </div>
+                                <X className="w-4 h-4 md:w-5 md:h-5" />
+                                <span className="text-sm md:text-base">Cancelar</span>
                             </button>
-                        ))}
-
-                        <button
-                            onClick={onClose}
-                            className="w-full flex items-center justify-center gap-2 p-3 rounded-2xl bg-muted/50 text-muted-foreground hover:bg-muted transition-colors mt-2"
-                        >
-                            <X className="w-4 h-4" />
-                            <span className="text-sm">Cancelar</span>
-                        </button>
+                        </div>
                     </div>
+
+                    {/* Safe area for iPhone home indicator */}
+                    {open && <div className="h-safe" />}
                 </div>
             </div>
 

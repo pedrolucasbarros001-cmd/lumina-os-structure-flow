@@ -64,26 +64,29 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="glass-surface border-r border-border/30 bg-gradient-to-b from-background via-background to-background">
+    <Sidebar 
+      collapsible="icon" 
+      className="glass-surface border-r border-border/30 bg-gradient-to-b from-background via-background/95 to-background/90 backdrop-blur-sm"
+    >
       <SidebarContent>
-        <div className="px-3 py-4">
+        <div className="px-2 md:px-3 py-4 md:py-5">
           <CompanySwitcher collapsed={collapsed} />
         </div>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.path}
                       end
-                      className="hover:bg-sidebar-accent/50 transition-smooth haptic-press rounded-xl"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+                      className="hover:bg-sidebar-accent/50 transition-all duration-200 haptic-press rounded-lg md:rounded-xl text-sm md:text-base px-3 py-2.5 md:py-3"
+                      activeClassName="bg-gradient-to-r from-primary/20 to-accent/20 text-primary font-medium shadow-sm"
                       onClick={handleNavClick}
                     >
-                      <item.icon className="mr-2 h-4 w-4 shrink-0" />
-                      {!collapsed && <span>{item.label}</span>}
+                      <item.icon className="mr-3 h-4 w-4 md:h-5 md:w-5 shrink-0" />
+                      {!collapsed && <span className="truncate">{item.label}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -96,11 +99,11 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-muted-foreground hover:text-foreground"
+          className="w-full justify-start text-xs md:text-sm text-muted-foreground hover:text-foreground hover:bg-destructive/10 transition-all duration-200 rounded-lg md:rounded-xl py-2 md:py-2.5"
           onClick={signOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          {!collapsed && 'Sair'}
+          {!collapsed && <span className="truncate">Sair</span>}
         </Button>
       </SidebarFooter>
     </Sidebar>
