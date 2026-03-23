@@ -45,32 +45,14 @@ export function LuminaLogo({
 
   const sizeConfig = sizes[size];
 
-  // Ícone L em quadrado arredondado com gradiente - SVG FIEL
+  // Ícone L em quadrado arredondado com gradiente - usando imagem
   const IconComponent = () => (
-    <div
-      className={cn(
-        sizeConfig.icon,
-        'rounded-[16px] flex items-center justify-center shrink-0 relative overflow-hidden',
-        showGradient ? 'lumina-gradient' : 'bg-primary'
-      )}
-    >
-      <svg 
-        viewBox="0 0 64 64" 
+    <div className={cn(sizeConfig.icon, 'flex items-center justify-center shrink-0')}>
+      <img 
+        src="/lumina-logo-icon.svg" 
+        alt="Lumina OS Logo" 
         className="w-full h-full"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Ponto branco - bem no topo, pequeno */}
-        <circle cx="32" cy="6" r="3" fill="white" />
-        
-        {/* L - Letra "L" com proporções fiel ao design */}
-        <g stroke="white" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round">
-          {/* Linha vertical (tronco do L) - começa logo após o ponto */}
-          <line x1="20" y1="18" x2="20" y2="52" />
-          {/* Linha horizontal (base do L) - mais longa */}
-          <line x1="20" y1="52" x2="44" y2="52" />
-        </g>
-      </svg>
+      />
     </div>
   );
 
