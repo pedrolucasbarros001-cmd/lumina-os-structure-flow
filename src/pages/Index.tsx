@@ -1,7 +1,8 @@
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LuminaLogo } from '@/components/LuminaLogo';
 
 export default function Index() {
   const navigate = useNavigate();
@@ -19,9 +20,8 @@ export default function Index() {
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] pointer-events-none" />
 
       <nav className="fixed top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-primary" />
-          <span className="text-xl font-black tracking-tighter uppercase italic">Lumina OS</span>
+        <div className="flex items-center">
+          <LuminaLogo variant="full" size="md" showGradient={true} />
         </div>
         <div className="flex gap-4">
           <Button variant="ghost" className="rounded-2xl font-bold uppercase tracking-wider text-xs px-6" onClick={() => navigate('/login')}>
@@ -31,12 +31,9 @@ export default function Index() {
       </nav>
 
       <main className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8 mt-16">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-black uppercase tracking-widest mb-4">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-          </span>
-          A Revolução Chegou
+        {/* Logo principal em destaque */}
+        <div className="flex justify-center mb-8">
+          <LuminaLogo variant="icon-only" size="xl" showGradient={true} />
         </div>
 
         <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] text-white">

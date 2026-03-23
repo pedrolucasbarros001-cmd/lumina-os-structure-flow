@@ -1,17 +1,24 @@
+:root {
+  /* Lumina Branding - Cores Principais */
+  --lumina-blue: #3B4BA0;
+  --lumina-purple: #7c5ce6;
+  --lumina-gradient: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
+  
+  /* Override das cores primárias Tailwind */
+  --primary: 259 90% 48% !important; /* Roxo Lumina */
+  --accent: 259 90% 48% !important; /* Roxo Lumina */
+}
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-
-  /* Lumina Branding */
-  --lumina-blue: #3B4BA0;
-  --lumina-purple: #7c5ce6;
-  --lumina-gradient: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
 }
 
+/* Gradiente: aplicável via classe */
 .lumina-gradient {
-  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%) !important;
 }
 
 .lumina-gradient-text {
@@ -19,6 +26,18 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Botões com gradiente força total */
+.btn-lumina {
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%) !important;
+  color: white !important;
+  border: none !important;
+}
+
+.btn-lumina:hover {
+  background: linear-gradient(135deg, #2d3a7a 0%, #6b4cc8 100%) !important;
+  opacity: 0.95;
 }
 
 .logo {
