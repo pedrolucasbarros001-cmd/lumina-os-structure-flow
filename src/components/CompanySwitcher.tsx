@@ -45,7 +45,7 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
     return (
       <button
         onClick={() => setOpen(!open)}
-        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white haptic-press bg-lumina-gradient"
+        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white haptic-press lumina-gradient"
         title={active?.name}
       >
         L
@@ -63,7 +63,7 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
           open && "bg-sidebar-accent/50"
         )}
       >
-        <div className="w-8 h-8 rounded-lg bg-lumina-gradient flex items-center justify-center text-xs font-bold text-white shrink-0">
+        <div className="w-8 h-8 rounded-lg lumina-gradient flex items-center justify-center text-xs font-bold text-white shrink-0">
           L
         </div>
         <div className="flex-1 min-w-0 text-left">
@@ -92,7 +92,7 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
               <div className={cn(
                 "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 text-white",
                 c.id === activeCompanyId
-                  ? "bg-lumina-gradient"
+                  ? "lumina-gradient"
                   : "bg-muted text-muted-foreground"
               )}>
                 L

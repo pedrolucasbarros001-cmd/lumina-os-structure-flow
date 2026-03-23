@@ -51,7 +51,7 @@ export function LuminaLogo({
       className={cn(
         sizeConfig.icon,
         'rounded-lg flex items-center justify-center font-bold text-white shrink-0',
-        showGradient ? 'bg-lumina-gradient' : 'bg-primary'
+        showGradient ? 'lumina-gradient' : 'bg-primary'
       )}
     >
       <span className="text-lg">L</span>

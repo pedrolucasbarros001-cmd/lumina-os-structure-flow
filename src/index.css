@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* LUMINA OS BRANDING - Classes Globais */
+.lumina-gradient {
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%) !important;
+}
+
+.lumina-gradient-text {
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
 @layer base {
   :root {
     --background: 220 20% 97%;
