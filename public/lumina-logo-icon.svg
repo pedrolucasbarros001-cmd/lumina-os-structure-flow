@@ -9,14 +9,14 @@
   <!-- Fundo arredondado com gradiente -->
   <rect x="12" y="12" width="104" height="104" rx="24" ry="24" fill="url(#luminaGradient)" />
   
-  <!-- Ponto branco centralizado -->
-  <circle cx="64" cy="32" r="6" fill="white" />
+  <!-- Ponto branco - alinhado acima do L -->
+  <circle cx="50" cy="25" r="6" fill="white" />
   
-  <!-- L branco com traços arredondados - centralizado -->
-  <g stroke="white" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <!-- Linha vertical -->
-    <line x1="54" y1="48" x2="54" y2="95" />
+  <!-- L branco com traços arredondados -->
+  <g stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Linha vertical - alinhada abaixo do ponto -->
+    <line x1="50" y1="42" x2="50" y2="92" />
     <!-- Linha horizontal -->
-    <line x1="54" y1="95" x2="95" y2="95" />
+    <line x1="50" y1="92" x2="85" y2="92" />
   </g>
 </svg>
