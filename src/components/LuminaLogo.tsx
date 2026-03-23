@@ -45,26 +45,31 @@ export function LuminaLogo({
 
   const sizeConfig = sizes[size];
 
-  // Ícone L em quadrado arredondado com gradiente - COM PONTO NO TOPO
+  // Ícone L em quadrado arredondado com gradiente - SVG FIEL
   const IconComponent = () => (
     <div
       className={cn(
         sizeConfig.icon,
-        'rounded-[16px] flex items-center justify-center font-black text-white shrink-0 relative',
+        'rounded-[16px] flex items-center justify-center shrink-0 relative overflow-hidden',
         showGradient ? 'lumina-gradient' : 'bg-primary'
       )}
-      style={{
-        fontSize: size === 'sm' ? '14px' : size === 'md' ? '18px' : size === 'lg' ? '24px' : '32px',
-      }}
     >
-      {/* Ponto no topo */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full" 
-        style={{
-          width: size === 'sm' ? '3px' : size === 'md' ? '4px' : size === 'lg' ? '5px' : '6px',
-          height: size === 'sm' ? '3px' : size === 'md' ? '4px' : size === 'lg' ? '5px' : '6px',
-        }}
-      />
-      L
+      <svg 
+        viewBox="0 0 64 64" 
+        className="w-full h-full p-2"
+        fill="none"
+      >
+        {/* Ponto no topo */}
+        <circle cx="32" cy="16" r="5.5" fill="white" />
+        
+        {/* L com linhas mais proporcionadas */}
+        <g stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+          {/* Vertical do L */}
+          <line x1="24" y1="24" x2="24" y2="52" />
+          {/* Horizontal do L */}
+          <line x1="24" y1="52" x2="44" y2="52" />
+        </g>
+      </svg>
     </div>
   );
 
