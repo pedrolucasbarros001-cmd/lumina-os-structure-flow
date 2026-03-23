@@ -89,7 +89,7 @@ export default function PlanSelection() {
         {/* Plans Grid */}
         <div className="w-full flex justify-center">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl px-6">
-          {PLANS.map((plan) => (
+            {PLANS.map((plan) => (
             <div
               key={plan.id}
               className={cn(
