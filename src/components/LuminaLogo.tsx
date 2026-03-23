@@ -60,15 +60,15 @@ export function LuminaLogo({
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Ponto branco - subtil, no topo */}
-        <circle cx="32" cy="10" r="3" fill="white" />
+        {/* Ponto branco - no topo, bem visível */}
+        <circle cx="32" cy="9" r="4.5" fill="white" />
         
-        {/* L - Letra "L" proporcional e clara */}
-        <g stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
-          {/* Linha vertical (tronco do L) */}
-          <line x1="22" y1="20" x2="22" y2="54" />
-          {/* Linha horizontal (base do L) */}
-          <line x1="22" y1="54" x2="42" y2="54" />
+        {/* L - Letra "L" com proporções fiel ao design */}
+        <g stroke="white" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round">
+          {/* Linha vertical (tronco do L) - mais comprida */}
+          <line x1="20" y1="18" x2="20" y2="52" />
+          {/* Linha horizontal (base do L) - mais longa */}
+          <line x1="20" y1="52" x2="44" y2="52" />
         </g>
       </svg>
     </div>
