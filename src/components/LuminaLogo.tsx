@@ -50,29 +50,43 @@ export function LuminaLogo({
     <div
       className={cn(
         sizeConfig.icon,
-        'rounded-lg flex items-center justify-center font-bold text-white shrink-0',
+        'rounded-[10px] flex items-center justify-center font-black text-white shrink-0',
         showGradient ? 'lumina-gradient' : 'bg-primary'
       )}
+      style={{
+        fontSize: size === 'sm' ? '14px' : size === 'md' ? '18px' : size === 'lg' ? '24px' : '32px',
+      }}
     >
-      <span className="text-lg">L</span>
+      L
     </div>
   );
 
   // Texto "LUMINA OS"
   const TextComponent = () => (
-    <div className="flex flex-col">
-      <span
-        className={cn(
-          sizeConfig.text,
-          'font-bold',
-          showGradient ? 'lumina-gradient-text' : 'text-foreground'
-        )}
-      >
-        LUMINA
-      </span>
-      <span className="text-[10px] font-medium text-muted-foreground tracking-widest">
-        OS
-      </span>
+    <div className="flex flex-col leading-tight">
+      <div className="flex items-baseline gap-1">
+        <span
+          className={cn(
+            sizeConfig.text,
+            'font-black',
+            'text-foreground'
+          )}
+        >
+          LUMINA
+        </span>
+        <span
+          className={cn(
+            'text-sm',
+            'font-bold',
+            showGradient ? 'lumina-gradient-text' : 'text-primary'
+          )}
+          style={{
+            fontSize: size === 'sm' ? '9px' : size === 'md' ? '11px' : size === 'lg' ? '13px' : '15px',
+          }}
+        >
+          OS
+        </span>
+      </div>
     </div>
   );
 
