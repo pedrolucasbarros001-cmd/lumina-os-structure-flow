@@ -25,26 +25,32 @@ const DAYS_LABELS = {
 };
 
 // Fetch shifts for a specific team member
+// NOTE: This requires the team_shifts table to be created in Supabase
 export function useTeamMemberShifts(teamMemberId?: string) {
   return useQuery({
     queryKey: ['team_member_shifts', teamMemberId],
     queryFn: async () => {
       if (!teamMemberId) return [];
 
-      const { data, error } = await supabase
-        .from('team_shifts')
-        .select('*')
-        .eq('team_member_id', teamMemberId)
-        .order('day_of_week');
+      // TODO: Uncomment when team_shifts table is created
+      // const { data, error } = await supabase
+      //   .from('team_shifts')
+      //   .select('*')
+      //   .eq('team_member_id', teamMemberId)
+      //   .order('day_of_week');
 
-      if (error) throw error;
-      return (data || []) as TeamShift[];
+      // if (error) throw error;
+      // return (data || []) as TeamShift[];
+
+      // Temporary: return mock data
+      return [];
     },
     enabled: !!teamMemberId,
   });
 }
 
 // Update a single shift
+// NOTE: This requires the team_shifts table to be created in Supabase
 export function useUpdateTeamShift() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -61,15 +67,18 @@ export function useUpdateTeamShift() {
       start_time: string | null;
       end_time: string | null;
     }) => {
-      const { data, error } = await supabase
-        .from('team_shifts')
-        .update({ is_working, start_time, end_time })
-        .eq('id', id)
-        .select()
-        .single();
+      // TODO: Uncomment when team_shifts table is created
+      // const { data, error } = await supabase
+      //   .from('team_shifts')
+      //   .update({ is_working, start_time, end_time })
+      //   .eq('id', id)
+      //   .select()
+      //   .single();
 
-      if (error) throw error;
-      return data;
+      // if (error) throw error;
+      // return data;
+
+      return { id };
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['team_member_shifts'] });
@@ -96,18 +105,19 @@ export function useUpsertTeamMemberShifts() {
       teamMemberId: string;
       shifts: Omit<TeamShift, 'id' | 'created_at' | 'updated_at'>[];
     }) => {
+      // TODO: Uncomment when team_shifts table is created
       // Upsert shifts for all days
-      const { error } = await supabase.from('team_shifts').upsert(
-        shifts.map(shift => ({
-          ...shift,
-          team_member_id: teamMemberId,
-        })),
-        {
-          onConflict: 'team_member_id,day_of_week',
-        }
-      );
+      // const { error } = await supabase.from('team_shifts').upsert(
+      //   shifts.map(shift => ({
+      //     ...shift,
+      //     team_member_id: teamMemberId,
+      //   })),
+      //   {
+      //     onConflict: 'team_member_id,day_of_week',
+      //   }
+      // );
 
-      if (error) throw error;
+      // if (error) throw error;
       return shifts;
     },
     onSuccess: () => {

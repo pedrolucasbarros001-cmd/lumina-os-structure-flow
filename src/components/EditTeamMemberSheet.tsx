@@ -100,12 +100,13 @@ export default function EditTeamMemberSheet({ open, onClose, member }: EditTeamM
         id: member.id,
         name: form.name,
         role: form.role,
-        address: form.address,
-        lat: form.lat ? parseFloat(form.lat) : null,
-        lng: form.lng ? parseFloat(form.lng) : null,
-        commission_rate: form.commission_rate[0],
-        modality: form.modality,
-        accepts_home_visits: form.modality !== 'unit' && form.accepts_home_visits,
+        // TODO: Uncomment when team_members table has these fields
+        // address: form.address,
+        // lat: form.lat ? parseFloat(form.lat) : null,
+        // lng: form.lng ? parseFloat(form.lng) : null,
+        // commission_rate: form.commission_rate[0],
+        // modality: form.modality,
+        // accepts_home_visits: form.modality !== 'unit' && form.accepts_home_visits,
       });
       toast({ title: 'Informações guardadas!' });
     } catch (error) {

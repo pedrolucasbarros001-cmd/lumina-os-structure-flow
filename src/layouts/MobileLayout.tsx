@@ -23,7 +23,7 @@ export default function MobileLayout() {
   const location = useLocation();
   const title = PAGE_TITLES[location.pathname] ?? 'LUMINA OS';
   const isAgenda = location.pathname === '/agenda';
-  const { unit } = useUnit();
+  const { data: unit } = useUnit();
   const showFab = ['/dashboard', '/agenda', '/clients'].includes(location.pathname);
 
   return (
