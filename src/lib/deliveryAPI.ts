@@ -180,6 +180,37 @@ export const deliveryAPI = {
   },
 
   /**
+   * Criar uma nova entrega a partir de um agendamento
+   */
+  async createDelivery(appointmentId: string, appointmentData: any, unitId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('deliveries')
+        .insert({
+          appointment_id: appointmentId,
+          unit_id: unitId,
+          customer_name: appointmentData.client_name || 'Cliente',
+          customer_phone: appointmentData.client_phone || '',
+          customer_address: appointmentData.address || '',
+          customer_lat: appointmentData.lat || 0,
+          customer_lon: appointmentData.lng || 0,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, data };
+    } catch (error) {
+      console.error('Create delivery error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Calcular ETA (tempo estimado de chegada)
    */
   calculateETA(

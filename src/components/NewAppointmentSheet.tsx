@@ -14,6 +14,7 @@ import { useUnit } from '@/hooks/useUnit';
 import { format, parseISO } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import TimePicker from '@/components/TimePicker';
 
 interface NewAppointmentSheetProps {
   open: boolean;
@@ -53,21 +54,16 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
   const [selectedClient, setSelectedClient] = useState<{ id: string; name: string; email?: string | null } | null>(null);
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState(prefillTeamMemberId || (isStaff && staffTeamMemberId ? staffTeamMemberId : ''));
+  const [selectedDate, setSelectedDate] = useState<string>(prefillDate || format(new Date(), 'yyyy-MM-dd'));
+  const [selectedTime, setSelectedTime] = useState<{ hours: number; minutes: number }>({ hours: 10, minutes: 0 });
 
   const datetime = useMemo(() => {
     if (prefillTime) return prefillTime;
-
-    const baseDate = prefillDate ? new Date(`${prefillDate}T10:00:00`) : new Date();
-    baseDate.setSeconds(0, 0);
-
-    const mins = baseDate.getMinutes();
-    const remainder = mins % 15;
-    if (remainder !== 0) {
-      baseDate.setMinutes(mins + (15 - remainder));
-    }
-
-    return format(baseDate, "yyyy-MM-dd'T'HH:mm");
-  }, [prefillDate, prefillTime]);
+    return format(
+      new Date(`${selectedDate}T${String(selectedTime.hours).padStart(2, '0')}:${String(selectedTime.minutes).padStart(2, '0')}:00`),
+      "yyyy-MM-dd'T'HH:mm"
+    );
+  }, [selectedDate, selectedTime, prefillTime]);
 
   useEffect(() => {
     if (open) {
@@ -78,6 +74,8 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
       setServiceSearch('');
       setAppointmentType('unit');
       setAppointmentAddress('');
+      setSelectedDate(prefillDate || format(new Date(), 'yyyy-MM-dd'));
+      setSelectedTime({ hours: 10, minutes: 0 });
       // Auto-select: prefill > staff own > sole team member
       const autoMember = prefillTeamMemberId || (isStaff && staffTeamMemberId ? staffTeamMemberId : (teamMembers.length === 1 ? teamMembers[0].id : ''));
       setSelectedTeamMemberId(autoMember);
@@ -333,6 +331,16 @@ export default function NewAppointmentSheet({ open, onClose, prefillDate, prefil
                   <Repeat className="w-4 h-4" />
                   <span>Não se repete</span>
                 </div>
+              </div>
+
+              {/* Time Picker */}
+              <div className="px-4 py-4 border-b border-border/30">
+                <label className="text-xs text-muted-foreground uppercase tracking-widest font-medium block mb-3">Hora da marcação</label>
+                <TimePicker
+                  value={selectedTime}
+                  onChange={setSelectedTime}
+                  intervalMinutes={15}
+                />
               </div>
 
               {/* Home visit type toggle - only if unit accepts home visits */}

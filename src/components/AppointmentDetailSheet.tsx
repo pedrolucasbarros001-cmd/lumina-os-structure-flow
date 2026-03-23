@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, Clock, MapPin, User, Calendar, Repeat, Mail, MoreHorizontal, CreditCard, Banknote, Check, ChevronLeft, Delete, Gift, DollarSign, FileText, Ban, AlertTriangle, Navigation, Loader2 } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -10,6 +11,8 @@ import { Appointment, useUpdateAppointmentStatus, useUpdateAppointment } from '@
 import { useServices } from '@/hooks/useServices';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useToast } from '@/hooks/use-toast';
+import { useUserContext } from '@/hooks/useUserContext';
+import { useCreateDelivery } from '@/hooks/useDelivery';
 import { cn } from '@/lib/utils';
 import SlideToAction from '@/components/SlideToAction';
 import AddressMap from '@/components/AddressMap';
@@ -69,10 +72,13 @@ const TIP_OPTIONS = [
 type View = 'detail' | 'actions' | 'cart' | 'tip' | 'checkout' | 'processing' | 'note' | 'done';
 
 export default function AppointmentDetailSheet({ appointment: appt, onClose }: AppointmentDetailSheetProps) {
+  const navigate = useNavigate();
+  const { unitId } = useUserContext();
   const { data: services = [] } = useServices();
   const { data: teamMembers = [] } = useTeamMembers();
   const updateStatus = useUpdateAppointmentStatus();
   const updateAppointment = useUpdateAppointment();
+  const createDelivery = useCreateDelivery();
   const { toast } = useToast();
 
   const [view, setView] = useState<View>('detail');
@@ -122,11 +128,41 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
   };
 
   const handleStartRoute = async () => {
-    await handleStatus('en_route');
-    // Open Google Maps directions
-    if (appt.address) {
-      const encoded = encodeURIComponent(appt.address);
-      window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, '_blank');
+    if (!isHome || !appt.id) return;
+
+    try {
+      setStatusLoading(true);
+
+      // Update appointment status to en_route
+      await handleStatus('en_route');
+
+      // Create delivery record
+      const deliveryResult = await createDelivery.mutateAsync({
+        appointmentId: appt.id,
+        appointmentData: {
+          client_name: appt.client_name,
+          client_phone: appt.client_phone,
+          address: appt.address,
+          lat: appt.lat,
+          lng: appt.lng,
+        },
+        unitId: unitId!,
+      });
+
+      setStatusLoading(false);
+
+      // Close this sheet
+      onClose();
+
+      // Navigate to delivery page with ID
+      if (deliveryResult.data?.id) {
+        navigate(`/delivery/${deliveryResult.data.id}`);
+      } else {
+        toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível criar a entrega.' });
+      }
+    } catch (error) {
+      setStatusLoading(false);
+      toast({ variant: 'destructive', title: 'Erro', description: error instanceof Error ? error.message : 'Erro ao iniciar trajeto' });
     }
   };
 
@@ -529,10 +565,36 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                   </div>
                 )}
 
-                {/* Address + mapa para agendamentos ao domicílio */}
-                {appt.address && (
-                  <div className="mt-3">
-                    <AddressMap address={appt.address} />
+                {/* Address - apenas para entregas domiciliares */}
+                {isHome && appt.address && (
+                  <div className="mt-4 p-3 rounded-xl bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-900/40">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-sky-600 dark:text-sky-400 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-sky-700 dark:text-sky-300 uppercase tracking-widest">Endereço de Entrega</p>
+                        <p className="text-sm text-sky-600 dark:text-sky-400 mt-1 break-words">{appt.address}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Mapa apenas durante/após entrega com GPS */}
+                    {(status === 'en_route' || status === 'arrived') && (
+                      <div className="mt-3 pt-3 border-t border-sky-200 dark:border-sky-900/40">
+                        <AddressMap address={appt.address} />
+                      </div>
+                    )}
+                    
+                    {/* Botão para abrir Google Maps durante trajeto */}
+                    {status === 'en_route' && (
+                      <button
+                        onClick={() => {
+                          const encoded = encodeURIComponent(appt.address);
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${encoded}`, '_blank');
+                        }}
+                        className="mt-3 w-full text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
+                      >
+                        Abrir em Google Maps ↗
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -589,7 +651,9 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                       label="Iniciar Trajeto"
                       color="yellow"
                       onConfirm={handleStartRoute}
+                      onClose={onClose}
                       loading={statusLoading}
+                      closeDelay={1000}
                     />
                   )}
 
@@ -598,7 +662,9 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
                       label="Check-in"
                       color="green"
                       onConfirm={handleCheckin}
+                      onClose={onClose}
                       loading={statusLoading}
+                      closeDelay={1000}
                     />
                   )}
 

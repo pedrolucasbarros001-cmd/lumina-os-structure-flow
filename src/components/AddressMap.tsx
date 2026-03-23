@@ -9,7 +9,7 @@ interface AddressMapProps {
   showNavigateButton?: boolean;
 }
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
+const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY || import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
 
 export default function AddressMap({ address, label, className = '', showNavigateButton = true }: AddressMapProps) {
   const [coords, setCoords] = useState<[number, number] | null>(null);
@@ -62,9 +62,30 @@ export default function AddressMap({ address, label, className = '', showNavigat
         )}
 
         {error && !loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-            <AlertCircle className="w-6 h-6" />
-            <p className="text-xs">Mapa indisponível</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted/40 to-muted p-4">
+            <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            <div className="text-center">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Mapa indisponível</p>
+              <p className="text-xs text-muted-foreground mb-2">Abra em outro serviço:</p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors"
+                >
+                  Google Maps
+                </a>
+                <a
+                  href={appleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded transition-colors"
+                >
+                  Apple Maps
+                </a>
+              </div>
+            </div>
           </div>
         )}
 

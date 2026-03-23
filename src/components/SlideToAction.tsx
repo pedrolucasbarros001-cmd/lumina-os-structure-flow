@@ -5,8 +5,10 @@ import { cn } from '@/lib/utils';
 interface SlideToActionProps {
   label: string;
   color?: 'yellow' | 'green' | 'blue';
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
+  onClose?: () => void;
   loading?: boolean;
+  closeDelay?: number; // Delay antes de fechar (ms)
 }
 
 const COLOR_MAP = {
@@ -33,10 +35,11 @@ const COLOR_MAP = {
 const THUMB_SIZE = 52;
 const THRESHOLD = 0.8;
 
-export default function SlideToAction({ label, color = 'blue', onConfirm, loading = false }: SlideToActionProps) {
+export default function SlideToAction({ label, color = 'blue', onConfirm, onClose, loading = false, closeDelay = 600 }: SlideToActionProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const startXRef = useRef(0);
   const maxRef = useRef(0);
   const colors = COLOR_MAP[color];
@@ -57,16 +60,45 @@ export default function SlideToAction({ label, color = 'blue', onConfirm, loadin
     setOffset(Math.max(0, Math.min(delta, maxRef.current)));
   }, [dragging]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback(async () => {
     if (!dragging) return;
     setDragging(false);
+    
     if (offset >= maxRef.current * THRESHOLD) {
       setOffset(maxRef.current);
-      onConfirm();
+      setIsConfirming(true);
+      
+      try {
+        // Chamar onConfirm (pode ser async)
+        const result = onConfirm();
+        if (result instanceof Promise) {
+          await result;
+        }
+      } catch (error) {
+        console.error('SlideToAction error:', error);
+        setOffset(0);
+        setIsConfirming(false);
+        return;
+      }
+      
+      // Fechar modal após delay (permite animação)
+      if (onClose) {
+        setTimeout(() => {
+          onClose();
+          setOffset(0);
+          setIsConfirming(false);
+        }, closeDelay);
+      } else {
+        // Se não houver onClose, apenas resetar estado depois
+        setTimeout(() => {
+          setOffset(0);
+          setIsConfirming(false);
+        }, closeDelay);
+      }
     } else {
       setOffset(0);
     }
-  }, [dragging, offset, onConfirm]);
+  }, [dragging, offset, onConfirm, onClose, closeDelay]);
 
   const progress = maxRef.current > 0 ? offset / maxRef.current : 0;
 
@@ -76,7 +108,7 @@ export default function SlideToAction({ label, color = 'blue', onConfirm, loadin
       className={cn(
         'relative h-14 rounded-2xl border-2 overflow-hidden select-none',
         colors.track,
-        loading && 'opacity-60 pointer-events-none'
+        (loading || isConfirming) && 'opacity-60 pointer-events-none'
       )}
     >
       {/* Fill bar */}

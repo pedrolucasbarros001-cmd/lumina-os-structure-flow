@@ -7,6 +7,7 @@ import { useClients } from '@/hooks/useClients';
 import { useServices } from '@/hooks/useServices';
 import { useCreateAppointment } from '@/hooks/useAppointments';
 import { useToast } from '@/hooks/use-toast';
+import SlideToAction from '@/components/SlideToAction';
 import { cn } from '@/lib/utils';
 
 interface QuickCheckoutSheetProps {
@@ -57,17 +58,28 @@ export default function QuickCheckoutSheet({ open, onClose }: QuickCheckoutSheet
                 status: 'completed',
             });
             setDone(true);
-            setTimeout(() => {
-                setDone(false);
-                setClientId('');
-                setSelectedServices([]);
-                setPayment('');
-                setCashPaid('');
-                onClose();
-            }, 2000);
+            toast({ 
+                title: 'Sucesso', 
+                description: `Pagamento de €${total.toFixed(2)} registado!` 
+            });
         } catch {
-            toast({ variant: 'destructive', title: 'Erro', description: 'Não foi possível registar o pagamento.' });
+            toast({ 
+                variant: 'destructive', 
+                title: 'Erro', 
+                description: 'Não foi possível registar o pagamento.' 
+            });
+            throw new Error('Pagamento falhou');
         }
+    };
+
+    const handleSheetClose = () => {
+        // Reset estado quando fecha
+        setDone(false);
+        setClientId('');
+        setSelectedServices([]);
+        setPayment('');
+        setCashPaid('');
+        onClose();
     };
 
     return (
@@ -191,13 +203,21 @@ export default function QuickCheckoutSheet({ open, onClose }: QuickCheckoutSheet
                             </div>
                         )}
 
-                        <Button
-                            className="w-full"
-                            disabled={!clientId || selectedServices.length === 0 || !payment || createAppointment.isPending}
-                            onClick={handleConfirm}
-                        >
-                            {createAppointment.isPending ? 'A processar...' : `Confirmar €${total.toFixed(2)}`}
-                        </Button>
+                        {done ? (
+                            <div className="w-full h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex items-center justify-center gap-3">
+                                <Check className="w-6 h-6 text-emerald-500" />
+                                <span className="font-semibold text-emerald-600">Pagamento Registado!</span>
+                            </div>
+                        ) : (
+                            <SlideToAction
+                                label={`Confirmar €${total.toFixed(2)}`}
+                                color="green"
+                                onConfirm={handleConfirm}
+                                onClose={handleSheetClose}
+                                loading={createAppointment.isPending}
+                                closeDelay={1500}
+                            />
+                        )}
                     </div>
                 )}
             </SheetContent>

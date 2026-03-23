@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { useEffect, useRef } from 'react';
+import { deliveryAPI } from '@/lib/deliveryAPI';
 
 export interface Delivery {
   id: string;
@@ -249,4 +250,18 @@ export function useDeliveryRealtime(deliveryId: string, onUpdate?: (data: Delive
       channelRef.current?.unsubscribe();
     };
   }, [deliveryId, onUpdate]);
+}
+
+// Create delivery from appointment
+export function useCreateDelivery() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { appointmentId: string; appointmentData: any; unitId: string }) => {
+      return deliveryAPI.createDelivery(payload.appointmentId, payload.appointmentData, payload.unitId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+    },
+  });
 }

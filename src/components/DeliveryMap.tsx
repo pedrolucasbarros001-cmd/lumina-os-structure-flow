@@ -4,7 +4,7 @@ import { Navigation, Loader2, AlertCircle, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { calculateDistance, type Delivery, type DeliveryLocation } from '@/hooks/useDelivery';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
+const MAPBOX_TOKEN = import.meta.env.VITE_GOOGLE_MAPS_KEY || import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN as string;
 
 interface DeliveryMapProps {
   delivery: Delivery;
@@ -57,8 +57,21 @@ export default function DeliveryMap({ delivery, driverLocation }: DeliveryMapPro
         )}
 
         {hasCoords && (!staticMapUrl || imgError) && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-muted/40 to-muted">
+            {staticMapUrl && imgError ? (
+              <>
+                <AlertCircle className="w-8 h-8 text-amber-600" />
+                <p className="text-sm text-muted-foreground">Erro ao carregar mapa</p>
+                <p className="text-xs text-muted-foreground max-w-xs text-center">
+                  Localização: {lat.toFixed(4)}, {lon.toFixed(4)}
+                </p>
+              </>
+            ) : (
+              <>
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">A carregar mapa...</p>
+              </>
+            )}
           </div>
         )}
 

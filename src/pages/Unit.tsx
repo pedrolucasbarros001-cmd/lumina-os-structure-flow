@@ -109,6 +109,7 @@ export default function Unit() {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (unit) {
@@ -143,6 +144,39 @@ export default function Unit() {
       });
     }
   }, [unit]);
+
+  // AutoSave when form changes (debounced)
+  useEffect(() => {
+    if (!unit) return;
+    
+    clearTimeout(autoSaveTimeoutRef.current);
+    autoSaveTimeoutRef.current = setTimeout(async () => {
+      try {
+        setSaving(true);
+        const payload = {
+          name: form.name,
+          phone: form.phone,
+          address: form.address,
+          bio: form.bio,
+          slug: form.slug,
+          accepts_home_visits: form.accepts_home_visits,
+          is_published: form.is_published,
+          business_hours: businessHours,
+          coverage_radius_km: parseFloat(mobility.coverage_radius_km) || 0,
+          updated_at: new Date().toISOString(),
+        };
+        await supabase.from('units').update(payload).eq('id', unit.id);
+        queryClient.invalidateQueries({ queryKey: ['unit'] });
+        toast({ title: '💾 Salvo automaticamente!', duration: 2000 });
+      } catch (error) {
+        console.error('AutoSave error:', error);
+      } finally {
+        setSaving(false);
+      }
+    }, 2000); // Save 2 seconds after user stops typing
+
+    return () => clearTimeout(autoSaveTimeoutRef.current);
+  }, [form, businessHours, unit, queryClient, toast]);
 
   const uploadImage = async (file: File, type: 'cover' | 'logo') => {
     if (!unit) return;
