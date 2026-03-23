@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import PanelLayout from "@/layouts/PanelLayout";
+import MobileLayout from "@/layouts/MobileLayout";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -22,7 +22,6 @@ import Unit from "./pages/Unit";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Onboarding from "./pages/Onboarding";
-// ProgressiveSetup removed — merged into Onboarding
 import PublicBooking from "./pages/PublicBooking";
 import PlanSelection from "./pages/PlanSelection";
 import StaffInvite from "./pages/StaffInvite";
@@ -67,8 +66,8 @@ const App = () => (
             {/* Legacy /setup redirects to agenda */}
             <Route path="/setup" element={<Navigate to="/agenda" replace />} />
 
-            {/* Protected panel routes */}
-            <Route element={<ProtectedRoute><PanelLayout /></ProtectedRoute>}>
+            {/* Protected mobile layout routes */}
+            <Route element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="agenda" element={<Agenda />} />
               <Route path="clients" element={<Clients />} />
