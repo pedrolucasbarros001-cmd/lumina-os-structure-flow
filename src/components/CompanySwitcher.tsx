@@ -1,6 +1,7 @@
 import { ChevronDown, Building2, Plus } from 'lucide-react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { PaywallModal } from '@/components/PaywallModal';
+import { LuminaLogo } from '@/components/LuminaLogo';
 import { cn } from '@/lib/utils';
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -44,10 +45,10 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
     return (
       <button
         onClick={() => setOpen(!open)}
-        className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center text-xs font-bold text-primary haptic-press"
+        className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white haptic-press bg-lumina-gradient"
         title={active?.name}
       >
-        {active?.name?.charAt(0)?.toUpperCase() || 'L'}
+        L
       </button>
     );
   }
@@ -62,8 +63,8 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
           open && "bg-sidebar-accent/50"
         )}
       >
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-xs font-bold text-primary-foreground shrink-0">
-          {active?.name?.charAt(0)?.toUpperCase() || 'L'}
+        <div className="w-8 h-8 rounded-lg bg-lumina-gradient flex items-center justify-center text-xs font-bold text-white shrink-0">
+          L
         </div>
         <div className="flex-1 min-w-0 text-left">
           <p className="text-sm font-semibold truncate">{active?.name || 'Empresa'}</p>
@@ -89,12 +90,12 @@ export function CompanySwitcher({ collapsed }: { collapsed: boolean }) {
               )}
             >
               <div className={cn(
-                "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0",
+                "w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 text-white",
                 c.id === activeCompanyId
-                  ? "bg-primary text-primary-foreground"
+                  ? "bg-lumina-gradient"
                   : "bg-muted text-muted-foreground"
               )}>
-                {c.name.charAt(0).toUpperCase()}
+                L
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium truncate">{c.name}</p>

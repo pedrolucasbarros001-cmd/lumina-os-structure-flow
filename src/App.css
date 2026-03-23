@@ -3,6 +3,22 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+
+  /* Lumina Branding */
+  --lumina-blue: #3B4BA0;
+  --lumina-purple: #7c5ce6;
+  --lumina-gradient: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
+}
+
+.lumina-gradient {
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
+}
+
+.lumina-gradient-text {
+  background: linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .logo {

@@ -116,6 +116,10 @@ export default {
         "roll-up": "roll-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "ring-fill": "ring-fill 1.2s ease-out forwards",
       },
+      backgroundImage: {
+        'lumina-gradient': 'linear-gradient(135deg, #3B4BA0 0%, #7c5ce6 100%)',
+        'lumina-gradient-light': 'linear-gradient(135deg, #4B5BB8 0%, #8e6ee8 100%)',
+      },
     },
   },
   plugins: [require("tailwindcss-animate")],

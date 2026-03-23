@@ -64,7 +64,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="glass-surface border-r border-border/30">
+    <Sidebar collapsible="icon" className="glass-surface border-r border-border/30 bg-gradient-to-b from-background via-background to-background">
       <SidebarContent>
         <div className="px-3 py-4">
           <CompanySwitcher collapsed={collapsed} />
