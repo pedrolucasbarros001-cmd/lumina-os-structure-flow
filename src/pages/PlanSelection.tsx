@@ -59,7 +59,7 @@ export default function PlanSelection() {
 
   return (
     <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center relative overflow-hidden">
-      <div className="w-full max-w-4xl z-10 space-y-10 px-6 pt-20">
+      <div className="w-full z-10 space-y-10 px-6 pt-20">
         {/* Header */}
         <div className="text-center space-y-6">
           <div className="flex justify-center">
@@ -87,7 +87,8 @@ export default function PlanSelection() {
         </div>
 
         {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full">
+        <div className="w-full flex justify-center">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl px-6">
           {PLANS.map((plan) => (
             <div
               key={plan.id}
@@ -163,6 +164,7 @@ export default function PlanSelection() {
               </Button>
             </div>
           ))}
+          </div>
         </div>
 
         {/* Footer note */}

@@ -25,28 +25,30 @@ export default function Index() {
         </div>
       </nav>
 
-      <main className="relative z-10 text-center px-4 max-w-4xl mx-auto space-y-8">
-        {/* Logo principal em destaque */}
-        <div className="flex justify-center mb-8 mt-24">
-          <LuminaLogo variant="icon-only" size="xl" showGradient={true} />
-        </div>
+      <main className="relative z-10 text-center w-full flex flex-col items-center justify-center min-h-screen space-y-8 px-4">
+        <div className="max-w-2xl">
+          {/* Logo principal em destaque */}
+          <div className="flex justify-center mb-8">
+            <LuminaLogo variant="icon-only" size="xl" showGradient={true} />
+          </div>
 
-        <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] text-white">
-          A Evolução do <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Seu Negócio</span>
-        </h1>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9] text-white">
+            A Evolução do <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Seu Negócio</span>
+          </h1>
 
-        <p className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto font-medium leading-relaxed">
-          O sistema de gestão definitivo. Automação, agendamentos inteligentes e controle total para marcas do segmento de beleza.
-        </p>
+          <p className="text-lg md:text-xl text-zinc-400 font-medium leading-relaxed mt-6">
+            O sistema de gestão definitivo. Automação, agendamentos inteligentes e controle total para marcas do segmento de beleza.
+          </p>
 
-        <div className="pt-8">
-          <Button
-            onClick={() => navigate('/plans')}
-            className="h-16 px-10 rounded-[2rem] bg-primary text-white font-black text-sm uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-2xl shadow-primary/30 flex items-center gap-3 mx-auto"
-          >
-            Começar Agora <ArrowRight className="w-5 h-5" />
-          </Button>
+          <div className="pt-8">
+            <Button
+              onClick={() => navigate('/plans')}
+              className="h-16 px-10 rounded-[2rem] bg-primary text-white font-black text-sm uppercase tracking-[0.2em] hover:scale-105 transition-all shadow-2xl shadow-primary/30 flex items-center gap-3 mx-auto"
+            >
+              Começar Agora <ArrowRight className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
       </main>
     </div>
