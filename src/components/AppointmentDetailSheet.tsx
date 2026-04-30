@@ -74,7 +74,7 @@ type View = 'detail' | 'actions' | 'cart' | 'tip' | 'checkout' | 'processing' | 
 
 export default function AppointmentDetailSheet({ appointment: appt, onClose }: AppointmentDetailSheetProps) {
   const navigate = useNavigate();
-  const { unitId } = useUserContext();
+  const { linkedUnitId } = useUserContext();
   const { data: services = [] } = useServices();
   const { data: teamMembers = [] } = useTeamMembers();
   const updateStatus = useUpdateAppointmentStatus();
