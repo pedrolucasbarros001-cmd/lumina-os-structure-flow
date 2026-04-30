@@ -145,7 +145,7 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
           client_phone: appt.client_phone,
           address: appt.address,
         },
-        unitId: unitId!,
+        unitId: appt.unit_id || linkedUnitId || '',
       });
 
       setStatusLoading(false);
