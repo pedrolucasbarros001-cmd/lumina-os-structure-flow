@@ -282,7 +282,9 @@ export type Database = {
       deliveries: {
         Row: {
           appointment_id: string | null
+          completed_at: string | null
           created_at: string | null
+          customer_address: string | null
           customer_lat: number | null
           customer_lng: number | null
           customer_name: string
@@ -290,12 +292,16 @@ export type Database = {
           driver_lat: number | null
           driver_lng: number | null
           id: string
+          started_at: string | null
           status: string | null
+          unit_id: string | null
           updated_at: string | null
         }
         Insert: {
           appointment_id?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          customer_address?: string | null
           customer_lat?: number | null
           customer_lng?: number | null
           customer_name: string
@@ -303,12 +309,16 @@ export type Database = {
           driver_lat?: number | null
           driver_lng?: number | null
           id?: string
+          started_at?: string | null
           status?: string | null
+          unit_id?: string | null
           updated_at?: string | null
         }
         Update: {
           appointment_id?: string | null
+          completed_at?: string | null
           created_at?: string | null
+          customer_address?: string | null
           customer_lat?: number | null
           customer_lng?: number | null
           customer_name?: string
@@ -316,7 +326,9 @@ export type Database = {
           driver_lat?: number | null
           driver_lng?: number | null
           id?: string
+          started_at?: string | null
           status?: string | null
+          unit_id?: string | null
           updated_at?: string | null
         }
         Relationships: [

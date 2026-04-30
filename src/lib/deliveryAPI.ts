@@ -1,251 +1,57 @@
-// @ts-nocheck
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * API utilities para deliveries
- * Usam Supabase RPC functions e direct table access
- */
-
 export const deliveryAPI = {
-  /**
-   * Check-in de entrega (marcar como 'arrived')
-   */
-  async checkIn(deliveryId: string, lat: number, lon: number) {
-    try {
-      const { data, error } = await supabase
-        .from('deliveries')
-        .update({
-          status: 'arrived',
-          driver_lat: lat,
-          driver_lon: lon,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', deliveryId)
-        .select()
-        .single();
+  async checkIn(deliveryId: string, lat: number, lng: number) {
+    const { data, error } = await supabase
+      .from('deliveries')
+      .update({
+        status: 'arrived',
+        driver_lat: lat,
+        driver_lng: lng,
+      })
+      .eq('id', deliveryId)
+      .select()
+      .single();
 
-      if (error) throw error;
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Check-in error:', error);
-      throw error;
-    }
+    if (error) throw error;
+    return { success: true, data };
   },
 
-  /**
-   * Completar entrega e atualizar appointment
-   */
   async completeDelivery(deliveryId: string, appointmentId: string) {
-    try {
-      // 1. Update delivery status
-      const { data: deliveryData, error: deliveryError } = await supabase
-        .from('deliveries')
-        .update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', deliveryId)
-        .select()
-        .single();
+    const { error: deliveryError } = await supabase
+      .from('deliveries')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('id', deliveryId);
 
-      if (deliveryError) throw deliveryError;
+    if (deliveryError) throw deliveryError;
 
-      // 2. Update appointment status (opcional, depende da lógica)
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .update({
-          status: 'completed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', appointmentId);
+    const { error: appointmentError } = await supabase
+      .from('appointments')
+      .update({ status: 'completed' as any })
+      .eq('id', appointmentId);
 
-      if (appointmentError) throw appointmentError;
+    if (appointmentError) throw appointmentError;
 
-      return { success: true, delivery: deliveryData };
-    } catch (error) {
-      console.error('Complete delivery error:', error);
-      throw error;
-    }
+    return { success: true };
   },
 
-  /**
-   * Obter link de rastreamento público
-   * (compartilhar com cliente)
-   */
   getTrackingLink(deliveryId: string): string {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/delivery/${deliveryId}`;
+    return `${window.location.origin}/delivery/${deliveryId}`;
   },
 
-  /**
-   * Enviar link de rastreamento via SMS/Email
-   */
-  async sendTrackingLink(
-    deliveryId: string,
-    customerPhone: string,
-    customerEmail?: string
-  ) {
-    try {
-      const trackingLink = this.getTrackingLink(deliveryId);
-
-      // Enviar SMS (se tiver integração Twilio ou similar)
-      if (customerPhone) {
-        // Este é ume exemplo - ajustar conforme a integração
-        const { error } = await supabase.functions.invoke('send-sms', {
-          body: {
-            phone: customerPhone,
-            message: `Rastreie sua entrega: ${trackingLink}`,
-          },
-        });
-
-        if (error) console.error('SMS error:', error);
-      }
-
-      // Enviar Email (se tiver integração)
-      if (customerEmail) {
-        const { error } = await supabase.functions.invoke('send-email', {
-          body: {
-            email: customerEmail,
-            subject: 'Rastreie sua entrega',
-            html: `
-              <p>Sua entrega está a caminho!</p>
-              <p><a href="${trackingLink}">Clique aqui para rastrear</a></p>
-            `,
-          },
-        });
-
-        if (error) console.error('Email error:', error);
-      }
-
-      return { success: true, trackingLink };
-    } catch (error) {
-      console.error('Send tracking link error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Validar se o ID da entrega é válido (proteção de segurança)
-   */
-  async validateDeliveryId(deliveryId: string): Promise<boolean> {
-    try {
-      const { data, error } = await supabase
-        .from('deliveries')
-        .select('id')
-        .eq('id', deliveryId)
-        .single();
-
-      return !error && !!data;
-    } catch (error) {
-      console.error('Validation error:', error);
-      return false;
-    }
-  },
-
-  /**
-   * Obter entregas de um unit (para staff/manager)
-   */
-  async getUnitDeliveries(unitId: string, status?: string) {
-    try {
-      let query = supabase
-        .from('deliveries')
-        .select(
-          `
-          *,
-          appointments (
-            id,
-            title,
-            customer_name
-          )
-        `
-        )
-        .eq('unit_id', unitId);
-
-      if (status) {
-        query = query.eq('status', status);
-      }
-
-      const { data, error } = await query.order('created_at', {
-        ascending: false,
-      });
-
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      console.error('Get unit deliveries error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Criar uma nova entrega a partir de um agendamento
-   */
-  async createDelivery(appointmentId: string, appointmentData: any, unitId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('deliveries')
-        .insert({
-          appointment_id: appointmentId,
-          unit_id: unitId,
-          customer_name: appointmentData.client_name || 'Cliente',
-          customer_phone: appointmentData.client_phone || '',
-          customer_address: appointmentData.address || '',
-          customer_lat: appointmentData.lat || 0,
-          customer_lon: appointmentData.lng || 0,
-          status: 'pending',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Create delivery error:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Calcular distância entre dois pontos (Haversine)
-   */
-  calculateDistance(
-    driverLat: number,
-    driverLon: number,
-    customerLat: number,
-    customerLon: number
-  ): number {
-    const R = 6371; // km
-    const dLat = ((customerLat - driverLat) * Math.PI) / 180;
-    const dLon = ((customerLon - driverLon) * Math.PI) / 180;
+  calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
     const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((driverLat * Math.PI) / 180) *
-        Math.cos((customerLat * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    return distance;
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   },
 
-  /**
-   * Calcular ETA (tempo estimado de chegada)
-   */
-  calculateETA(
-    driverLat: number,
-    driverLon: number,
-    customerLat: number,
-    customerLon: number,
-    avgSpeedKmH: number = 40 // velocidade média em cidade
-  ): number {
-    const distance = this.calculateDistance(driverLat, driverLon, customerLat, customerLon);
-    // Calculate ETA in minutes
-    const timeMinutes = (distance / avgSpeedKmH) * 60;
-    return Math.round(timeMinutes);
+  calculateETA(lat1: number, lng1: number, lat2: number, lng2: number, avgSpeedKmH = 40): number {
+    const distance = this.calculateDistance(lat1, lng1, lat2, lng2);
+    return Math.round((distance / avgSpeedKmH) * 60);
   },
 };

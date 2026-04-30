@@ -74,7 +74,7 @@ type View = 'detail' | 'actions' | 'cart' | 'tip' | 'checkout' | 'processing' | 
 
 export default function AppointmentDetailSheet({ appointment: appt, onClose }: AppointmentDetailSheetProps) {
   const navigate = useNavigate();
-  const { unitId } = useUserContext();
+  const { linkedUnitId } = useUserContext();
   const { data: services = [] } = useServices();
   const { data: teamMembers = [] } = useTeamMembers();
   const updateStatus = useUpdateAppointmentStatus();
@@ -144,10 +144,8 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
           client_name: appt.client_name,
           client_phone: appt.client_phone,
           address: appt.address,
-          lat: appt.lat,
-          lng: appt.lng,
         },
-        unitId: unitId!,
+        unitId: appt.unit_id || linkedUnitId || '',
       });
 
       setStatusLoading(false);
