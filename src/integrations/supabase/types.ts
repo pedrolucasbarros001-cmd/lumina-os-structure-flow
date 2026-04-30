@@ -14,16 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointment_confirmations: {
+        Row: {
+          appointment_id: string
+          confirmation_token: string
+          confirmed_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          reminder_sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          appointment_id: string
+          confirmation_token: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          reminder_sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          confirmation_token?: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          reminder_sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_confirmations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           address: string | null
           amount_received: number | null
+          assistant_last_update: string | null
+          assistant_lat: number | null
+          assistant_lng: number | null
+          assistant_status: string | null
           client_email: string | null
           client_id: string | null
           client_name: string | null
           client_phone: string | null
           created_at: string
           datetime: string
+          deleted_at: string | null
           displacement_fee: number
           distance_km: number | null
           duration: number
@@ -43,12 +89,17 @@ export type Database = {
         Insert: {
           address?: string | null
           amount_received?: number | null
+          assistant_last_update?: string | null
+          assistant_lat?: number | null
+          assistant_lng?: number | null
+          assistant_status?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
           datetime: string
+          deleted_at?: string | null
           displacement_fee?: number
           distance_km?: number | null
           duration?: number
@@ -68,12 +119,17 @@ export type Database = {
         Update: {
           address?: string | null
           amount_received?: number | null
+          assistant_last_update?: string | null
+          assistant_lat?: number | null
+          assistant_lng?: number | null
+          assistant_status?: string | null
           client_email?: string | null
           client_id?: string | null
           client_name?: string | null
           client_phone?: string | null
           created_at?: string
           datetime?: string
+          deleted_at?: string | null
           displacement_fee?: number
           distance_km?: number | null
           duration?: number
@@ -117,6 +173,7 @@ export type Database = {
       clients: {
         Row: {
           created_at: string
+          deleted_at: string | null
           email: string | null
           id: string
           name: string
@@ -126,6 +183,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id?: string
           name: string
@@ -135,6 +193,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -157,6 +216,7 @@ export type Database = {
           commission_rate: number
           company_id: string
           created_at: string
+          deleted_at: string | null
           id: string
           role: string
           user_id: string
@@ -165,6 +225,7 @@ export type Database = {
           commission_rate?: number
           company_id: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           role?: string
           user_id: string
@@ -173,6 +234,7 @@ export type Database = {
           commission_rate?: number
           company_id?: string
           created_at?: string
+          deleted_at?: string | null
           id?: string
           role?: string
           user_id?: string
@@ -183,6 +245,86 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deletion_logs: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string | null
+          id: string
+          reason: string | null
+          recovered_at: string | null
+          scheduled_for: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          recovered_at?: string | null
+          scheduled_for: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          reason?: string | null
+          recovered_at?: string | null
+          scheduled_for?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deliveries: {
+        Row: {
+          appointment_id: string | null
+          created_at: string | null
+          customer_lat: number | null
+          customer_lng: number | null
+          customer_name: string
+          customer_phone: string | null
+          driver_lat: number | null
+          driver_lng: number | null
+          id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string | null
+          customer_lat?: number | null
+          customer_lng?: number | null
+          customer_name: string
+          customer_phone?: string | null
+          driver_lat?: number | null
+          driver_lng?: number | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string | null
+          customer_lat?: number | null
+          customer_lng?: number | null
+          customer_name?: string
+          customer_phone?: string | null
+          driver_lat?: number | null
+          driver_lng?: number | null
+          id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
         ]
@@ -259,57 +401,100 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_staff_in_unit_id: string | null
           agenda_tutorial_completed: boolean
           avatar_url: string | null
           business_type: string | null
           created_at: string
+          currency: string | null
+          deleted_at: string | null
+          deletion_period_days: number | null
+          deletion_requested_at: string | null
           full_name: string | null
           id: string
           invited_via: string | null
+          is_active_as_staff: boolean | null
           language: string
           linked_unit_id: string | null
+          notifications_enabled: boolean | null
           onboarding_completed: boolean
+          recovery_token: string | null
           service_model: string | null
           setup_completed: boolean
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
           team_size: string | null
+          trial_ends_at: string | null
           updated_at: string
           user_type: string | null
         }
         Insert: {
+          active_staff_in_unit_id?: string | null
           agenda_tutorial_completed?: boolean
           avatar_url?: string | null
           business_type?: string | null
           created_at?: string
+          currency?: string | null
+          deleted_at?: string | null
+          deletion_period_days?: number | null
+          deletion_requested_at?: string | null
           full_name?: string | null
           id: string
           invited_via?: string | null
+          is_active_as_staff?: boolean | null
           language?: string
           linked_unit_id?: string | null
+          notifications_enabled?: boolean | null
           onboarding_completed?: boolean
+          recovery_token?: string | null
           service_model?: string | null
           setup_completed?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           team_size?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_type?: string | null
         }
         Update: {
+          active_staff_in_unit_id?: string | null
           agenda_tutorial_completed?: boolean
           avatar_url?: string | null
           business_type?: string | null
           created_at?: string
+          currency?: string | null
+          deleted_at?: string | null
+          deletion_period_days?: number | null
+          deletion_requested_at?: string | null
           full_name?: string | null
           id?: string
           invited_via?: string | null
+          is_active_as_staff?: boolean | null
           language?: string
           linked_unit_id?: string | null
+          notifications_enabled?: boolean | null
           onboarding_completed?: boolean
+          recovery_token?: string | null
           service_model?: string | null
           setup_completed?: boolean
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           team_size?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
           user_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_active_staff_in_unit_id_fkey"
+            columns: ["active_staff_in_unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_linked_unit_id_fkey"
             columns: ["linked_unit_id"]
@@ -322,6 +507,7 @@ export type Database = {
       services: {
         Row: {
           created_at: string
+          deleted_at: string | null
           description: string | null
           duration: number
           id: string
@@ -336,6 +522,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           duration?: number
           id?: string
@@ -350,6 +537,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           duration?: number
           id?: string
@@ -365,6 +553,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "services_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_blocked_time: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          end_time: string
+          id: string
+          reason: string | null
+          start_time: string
+          team_member_id: string
+          title: string
+          unit_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_time: string
+          id?: string
+          reason?: string | null
+          start_time: string
+          team_member_id: string
+          title: string
+          unit_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          end_time?: string
+          id?: string
+          reason?: string | null
+          start_time?: string
+          team_member_id?: string
+          title?: string
+          unit_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_blocked_time_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_blocked_time_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
             referencedRelation: "units"
@@ -424,34 +669,46 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          canceled_at: string | null
           created_at: string
           expires_at: string | null
           id: string
+          max_team_per_unit: number | null
+          max_units: number | null
           owner_id: string
           plan_type: string
           started_at: string
           status: string
           updated_at: string
+          will_delete_at: string | null
         }
         Insert: {
+          canceled_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
+          max_team_per_unit?: number | null
+          max_units?: number | null
           owner_id: string
           plan_type?: string
           started_at?: string
           status?: string
           updated_at?: string
+          will_delete_at?: string | null
         }
         Update: {
+          canceled_at?: string | null
           created_at?: string
           expires_at?: string | null
           id?: string
+          max_team_per_unit?: number | null
+          max_units?: number | null
           owner_id?: string
           plan_type?: string
           started_at?: string
           status?: string
           updated_at?: string
+          will_delete_at?: string | null
         }
         Relationships: []
       }
@@ -493,6 +750,7 @@ export type Database = {
           accepts_home_visits: boolean
           bio: string | null
           created_at: string
+          deleted_at: string | null
           id: string
           is_active: boolean
           name: string
@@ -506,6 +764,7 @@ export type Database = {
           accepts_home_visits?: boolean
           bio?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           name: string
@@ -519,6 +778,7 @@ export type Database = {
           accepts_home_visits?: boolean
           bio?: string | null
           created_at?: string
+          deleted_at?: string | null
           id?: string
           is_active?: boolean
           name?: string
@@ -549,7 +809,10 @@ export type Database = {
           cover_url: string | null
           coverage_radius_km: number
           created_at: string
+          deleted_at: string | null
+          deletion_type: string | null
           id: string
+          is_public_visible: boolean | null
           is_published: boolean
           latitude: number | null
           logistics_type: string | null
@@ -559,6 +822,7 @@ export type Database = {
           nif: string | null
           owner_id: string
           phone: string | null
+          public_booking_slug: string | null
           settings_json: Json
           slug: string | null
           updated_at: string
@@ -573,7 +837,10 @@ export type Database = {
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
+          deleted_at?: string | null
+          deletion_type?: string | null
           id?: string
+          is_public_visible?: boolean | null
           is_published?: boolean
           latitude?: number | null
           logistics_type?: string | null
@@ -583,6 +850,7 @@ export type Database = {
           nif?: string | null
           owner_id: string
           phone?: string | null
+          public_booking_slug?: string | null
           settings_json?: Json
           slug?: string | null
           updated_at?: string
@@ -597,7 +865,10 @@ export type Database = {
           cover_url?: string | null
           coverage_radius_km?: number
           created_at?: string
+          deleted_at?: string | null
+          deletion_type?: string | null
           id?: string
+          is_public_visible?: boolean | null
           is_published?: boolean
           latitude?: number | null
           logistics_type?: string | null
@@ -607,6 +878,7 @@ export type Database = {
           nif?: string | null
           owner_id?: string
           phone?: string | null
+          public_booking_slug?: string | null
           settings_json?: Json
           slug?: string | null
           updated_at?: string
@@ -644,6 +916,27 @@ export type Database = {
         Args: { _owner_id: string; _resource: string }
         Returns: boolean
       }
+      confirm_appointment_by_token: {
+        Args: { p_confirmed: boolean; p_token: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      delete_expired_accounts: {
+        Args: never
+        Returns: {
+          deleted_count: number
+        }[]
+      }
+      get_user_plan_limits: {
+        Args: { user_id: string }
+        Returns: {
+          current_units: number
+          max_team_per_unit: number
+          max_units: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -653,6 +946,31 @@ export type Database = {
       }
       is_company_member: { Args: { _company_id: string }; Returns: boolean }
       is_company_owner: { Args: { _company_id: string }; Returns: boolean }
+      mark_expired_appointments_as_no_show: {
+        Args: never
+        Returns: {
+          updated_count: number
+        }[]
+      }
+      send_appointment_reminders: {
+        Args: never
+        Returns: {
+          sent_count: number
+        }[]
+      }
+      validate_delivery_location: {
+        Args: {
+          p_appointment_type: string
+          p_customer_lat: number
+          p_customer_lon: number
+          p_unit_id: string
+        }
+        Returns: {
+          distance_km: number
+          is_valid: boolean
+          reason: string
+        }[]
+      }
     }
     Enums: {
       app_role: "owner" | "team_member"
