@@ -144,8 +144,6 @@ export default function AppointmentDetailSheet({ appointment: appt, onClose }: A
           client_name: appt.client_name,
           client_phone: appt.client_phone,
           address: appt.address,
-          lat: appt.lat,
-          lng: appt.lng,
         },
         unitId: unitId!,
       });
