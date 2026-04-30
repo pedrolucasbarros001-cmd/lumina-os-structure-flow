@@ -15,7 +15,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { SidebarTrigger } from '@/components/ui/sidebar';
+
 
 const HOUR_HEIGHT = 72;
 const START_HOUR = 0;
@@ -463,7 +463,7 @@ export default function Agenda() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <SidebarTrigger className="shrink-0 -ml-1" />
+            
             <button className="flex items-center gap-1.5 group" onClick={goToday}>
               <h2 className="text-lg font-bold capitalize">
                 {format(selected, "EEEE, d 'de' MMMM", { locale: pt })}
